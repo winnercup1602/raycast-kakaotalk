@@ -31,6 +31,18 @@ function normalizeAutomationError(message: string): string {
     return "Could not find the KakaoTalk chat list. Open KakaoTalk, make sure you are signed in, and try again.";
   }
 
+  if (message.includes("NO_CHAT_SEARCH_FIELD")) {
+    return "Could not find the KakaoTalk chat search field. Open the main KakaoTalk chat list and try again.";
+  }
+
+  const chatNotFound = message.match(/CHAT_NOT_FOUND:([\s\S]*)/);
+  if (chatNotFound) {
+    const chatName = chatNotFound[1]?.trim();
+    return chatName
+      ? `Could not find "${chatName}" in KakaoTalk chat search results. Try importing chats again or edit the saved search name.`
+      : "Could not find the chat in KakaoTalk search results.";
+  }
+
   const titleMismatch = message.match(/CHAT_TITLE_MISMATCH:([\s\S]*)/);
   if (titleMismatch) {
     const activeTitle = titleMismatch[1]?.trim();

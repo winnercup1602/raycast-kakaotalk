@@ -129,20 +129,7 @@ on run argv
       key code 19 using command down
     end tell
 
-    delay delaySeconds
-    set the clipboard to chatName
-
-    tell application "System Events"
-      key code 3 using command down
-      delay delaySeconds
-      key code 0 using command down
-      delay (delaySeconds / 2)
-      keystroke "v" using command down
-      delay delaySeconds
-      key code 125
-      delay (delaySeconds / 2)
-      key code 36
-    end tell
+    my searchAndOpenChat(chatName, delaySeconds)
 
     delay (delaySeconds * 2)
     set openedTitle to my frontWindowTitle()
@@ -194,6 +181,61 @@ on titleDoesNotMatch(openedTitle, expectedTitle)
   if expectedTitle contains openedTitle then return false
   return true
 end titleDoesNotMatch
+
+on searchAndOpenChat(chatName, delaySeconds)
+  tell application "System Events"
+    tell process "KakaoTalk"
+      if not (exists window "카카오톡") then error "NO_CHAT_TABLE"
+      set mainWindow to window "카카오톡"
+      try
+        set searchField to text field 1 of mainWindow
+      on error
+        error "NO_CHAT_SEARCH_FIELD"
+      end try
+
+      set focused of searchField to true
+      set value of searchField to ""
+      delay (delaySeconds / 2)
+      set value of searchField to chatName
+    end tell
+
+    delay (delaySeconds * 2)
+
+    tell process "KakaoTalk"
+      try
+        set tableRef to table 1 of scroll area 1 of window "카카오톡"
+      on error
+        error "NO_CHAT_TABLE"
+      end try
+
+      set rowCount to count of rows of tableRef
+      set rowsToCheck to rowCount
+      if rowsToCheck > 25 then set rowsToCheck to 25
+
+      set matchedIndex to 0
+      repeat with i from 1 to rowsToCheck
+        try
+          set cellRef to UI element 1 of row i of tableRef
+          set rowName to value of static text 1 of cellRef as text
+          if rowName is chatName or rowName contains chatName or chatName contains rowName then
+            set matchedIndex to i
+            exit repeat
+          end if
+        end try
+      end repeat
+
+      if matchedIndex is 0 then error "CHAT_NOT_FOUND:" & chatName
+      set focused of text field 1 of window "카카오톡" to true
+    end tell
+
+    repeat matchedIndex times
+      key code 125
+      delay 0.05
+    end repeat
+    delay (delaySeconds / 2)
+    key code 36
+  end tell
+end searchAndOpenChat
 
 on restoreClipboard(previousClipboard)
   try
