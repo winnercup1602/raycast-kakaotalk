@@ -11,44 +11,10 @@ export function getErrorMessage(error: unknown): string {
 }
 
 function normalizeAutomationError(message: string): string {
-  if (message.includes("ACCESSIBILITY_PERMISSION_REQUIRED")) {
-    return "Raycast needs Accessibility permission to control KakaoTalk. Open System Settings > Privacy & Security > Accessibility and enable Raycast.";
-  }
-
-  if (message.includes("KAKAOTALK_NOT_INSTALLED")) {
-    return "KakaoTalk is not installed on this Mac.";
-  }
-
-  if (message.includes("KAKAOTALK_NOT_RUNNING")) {
-    return "KakaoTalk did not start correctly.";
-  }
-
-  if (message.includes("EMPTY_MESSAGE")) {
-    return "Message cannot be empty.";
-  }
-
-  if (message.includes("CHAT_NOT_SENDABLE")) {
-    return "This KakaoTalk chat does not appear to have an active message input, so no message was sent. Open the chat manually to check whether replies are allowed.";
-  }
-
-  if (message.includes("MESSAGE_INPUT_FAILED") || message.includes("MESSAGE_PASTE_FAILED")) {
-    return "KakaoTalk did not accept the message text in the chat input, so no message was sent. Try again after opening the chat manually.";
-  }
-
-  if (message.includes("MESSAGE_SEND_FAILED")) {
-    return "The message was entered, but KakaoTalk did not send it. The send button may not be available, or this chat may block replies.";
-  }
-
-  if (message.includes("QUIET_CHAT_FOLDER_NOT_CHAT")) {
-    return "Quiet Chats is a folder row, not an individual chat. Search for the actual chat name instead.";
-  }
-
-  if (message.includes("NO_CHAT_TABLE")) {
-    return "Could not find the KakaoTalk chat list. Open KakaoTalk, make sure you are signed in, and try again.";
-  }
-
-  if (message.includes("NO_CHAT_SEARCH_FIELD")) {
-    return "Could not find the KakaoTalk chat search field. Open the main KakaoTalk chat list and try again.";
+  for (const [errorCode, userMessage] of AUTOMATION_ERROR_MESSAGES) {
+    if (message.includes(errorCode)) {
+      return userMessage;
+    }
   }
 
   const chatNotFound = message.match(/CHAT_NOT_FOUND:([\s\S]*)/);
@@ -59,13 +25,31 @@ function normalizeAutomationError(message: string): string {
       : "Could not find the chat in KakaoTalk search results.";
   }
 
-  const titleMismatch = message.match(/CHAT_TITLE_MISMATCH:([\s\S]*)/);
-  if (titleMismatch) {
-    const activeTitle = titleMismatch[1]?.trim();
-    return activeTitle
-      ? `The active KakaoTalk chat looked like "${activeTitle}", so the message was not sent. Update the saved search name to match the chat title.`
-      : "Could not verify the active KakaoTalk chat, so the message was not sent.";
-  }
-
   return message.replace(/^Error: /, "").trim();
 }
+
+const AUTOMATION_ERROR_MESSAGES = [
+  [
+    "ACCESSIBILITY_PERMISSION_REQUIRED",
+    "Raycast needs Accessibility permission to control KakaoTalk. Open System Settings > Privacy & Security > Accessibility and enable Raycast.",
+  ],
+  ["KAKAOTALK_NOT_INSTALLED", "KakaoTalk is not installed on this Mac."],
+  ["KAKAOTALK_NOT_RUNNING", "KakaoTalk did not start correctly."],
+  [
+    "KAKAOTALK_NOT_FRONTMOST",
+    "KakaoTalk did not become the active app, so no keyboard input was sent. Try again after bringing KakaoTalk to the front once.",
+  ],
+  ["EMPTY_MESSAGE", "Message cannot be empty."],
+  [
+    "QUIET_CHAT_FOLDER_NOT_CHAT",
+    "Quiet Chats is a folder row, not an individual chat. Search for the actual chat name instead.",
+  ],
+  [
+    "NO_CHAT_TABLE",
+    "Could not find the KakaoTalk chat list. Open KakaoTalk, make sure you are signed in, and try again.",
+  ],
+  [
+    "CHAT_OPEN_FAILED",
+    "KakaoTalk searched the chat, but did not open the first result. Try increasing the automation delay in extension preferences.",
+  ],
+] as const;

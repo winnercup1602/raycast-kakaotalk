@@ -1,6 +1,6 @@
 import { openChat } from "../services/automation";
 import { getChats, touchChat } from "../storage";
-import { findChatByName } from "../utils/chat";
+import { requireChatByName } from "../utils/chat";
 import { getErrorMessage } from "../utils/errors";
 import { getAutomationSettings } from "../utils/preferences";
 
@@ -14,11 +14,7 @@ type Input = {
 export default async function OpenChatTool(input: Input) {
   try {
     const chats = await getChats();
-    const chat = findChatByName(chats, input.name);
-
-    if (!chat) {
-      throw new Error(`No saved KakaoTalk chat matches "${input.name}".`);
-    }
+    const chat = requireChatByName(chats, input.name);
 
     await openChat(chat, { ...getAutomationSettings(), shouldSend: false });
     await touchChat(chat.id);

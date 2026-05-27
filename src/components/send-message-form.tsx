@@ -15,11 +15,11 @@ import { useState } from "react";
 import { ChatForm } from "./chat-form";
 import { sendMessageToChat } from "../services/automation";
 import { touchChat } from "../storage";
-import { SendMessageFormValues, Preferences } from "../types";
-import { getChatSubtitle, isRegularChat, sortChats } from "../utils/chat";
+import { KakaoChat, Preferences, SendMessageFormValues } from "../types";
+import { getChatSubtitle, getSortedRegularChats } from "../utils/chat";
+import { useKakaoChats } from "../hooks/use-kakao-chats";
 import { getErrorMessage } from "../utils/errors";
 import { getAutomationSettings } from "../utils/preferences";
-import { useKakaoChats } from "../hooks/use-kakao-chats";
 
 interface SendMessageFormProps {
   defaultChatId?: string;
@@ -30,10 +30,10 @@ export function SendMessageForm({ defaultChatId }: SendMessageFormProps) {
   const { pop } = useNavigation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState(defaultChatId ?? "");
-  const sortedChats = sortChats(chats).filter(isRegularChat);
+  const sortedChats = getSortedRegularChats(chats);
 
   async function handleSubmit(values: SendMessageFormValues) {
-    const chat = chats.find((item) => item.id === values.chatId);
+    const chat = sortedChats.find((item) => item.id === values.chatId);
     const message = values.message.trim();
 
     if (!chat) {
@@ -119,7 +119,7 @@ export function SendMessageForm({ defaultChatId }: SendMessageFormProps) {
   );
 }
 
-function getSelectedChatDescription(chats: ReturnType<typeof sortChats>, selectedChatId: string): string {
+function getSelectedChatDescription(chats: KakaoChat[], selectedChatId: string): string {
   const chat = chats.find((item) => item.id === selectedChatId);
   return chat ? `Target: ${chat.name} (${getChatSubtitle(chat)})` : "Select a chat before writing the message.";
 }

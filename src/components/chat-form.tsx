@@ -1,8 +1,8 @@
 import { Action, ActionPanel, Form, Icon, showToast, Toast, useNavigation } from "@raycast/api";
 import { useState } from "react";
-import { getChats, saveChats } from "../storage";
+import { upsertChat } from "../storage";
 import { ChatFormValues, KakaoChat } from "../types";
-import { createChatId, formatAliases, isQuietChatFolderName, parseAliases } from "../utils/chat";
+import { SELF_CHAT_NAME, createChatId, formatAliases, isQuietChatFolderName, parseAliases } from "../utils/chat";
 import { getErrorMessage } from "../utils/errors";
 
 interface ChatFormProps {
@@ -19,7 +19,7 @@ export function ChatForm({ chat }: ChatFormProps) {
 
     try {
       const name = values.name.trim();
-      const searchName = values.selfChat ? "나와의 채팅" : (values.searchName || values.name).trim();
+      const searchName = values.selfChat ? SELF_CHAT_NAME : (values.searchName || values.name).trim();
 
       if (!name) {
         throw new Error("Display name is required.");
@@ -47,12 +47,7 @@ export function ChatForm({ chat }: ChatFormProps) {
         updatedAt: now,
       };
 
-      const chats = await getChats();
-      const nextChats = isEditing
-        ? chats.map((item) => (item.id === nextChat.id ? nextChat : item))
-        : [...chats, nextChat];
-
-      await saveChats(nextChats);
+      await upsertChat(nextChat);
       await showToast({
         style: Toast.Style.Success,
         title: isEditing ? "Chat Updated" : "Chat Added",
@@ -89,7 +84,7 @@ export function ChatForm({ chat }: ChatFormProps) {
         title="KakaoTalk Search Name"
         placeholder="Exact chat name KakaoTalk can find"
         defaultValue={chat?.searchName}
-        info="Use the exact name that appears in KakaoTalk search. The extension stops before sending if the opened chat title does not match this value."
+        info="Use the exact name that appears in KakaoTalk chat search."
       />
       <Form.TextArea
         id="aliases"

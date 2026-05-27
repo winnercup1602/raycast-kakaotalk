@@ -1,14 +1,13 @@
 import { Action, ActionPanel, Icon, List, showToast, Toast } from "@raycast/api";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useKakaoChats } from "../hooks/use-kakao-chats";
 import { importChatNames } from "../services/automation";
 import {
   filterImportableChatNames,
   getChatCandidates,
-  isRegularChat,
+  getSortedRegularChats,
   mergeImportedChatNames,
   normalizeQuery,
-  sortChats,
 } from "../utils/chat";
 import { getErrorMessage } from "../utils/errors";
 import { getImportSettings } from "../utils/preferences";
@@ -17,7 +16,10 @@ export function ImportChatsView() {
   const { chats, isLoading, setChats, reload } = useKakaoChats();
   const [importedNames, setImportedNames] = useState<string[]>([]);
   const [isImporting, setIsImporting] = useState(false);
-  const existingNames = new Set(chats.flatMap((chat) => getChatCandidates(chat).map(normalizeQuery)));
+  const existingNames = useMemo(
+    () => new Set(chats.flatMap((chat) => getChatCandidates(chat).map(normalizeQuery))),
+    [chats],
+  );
 
   async function handleImport() {
     setIsImporting(true);
@@ -53,9 +55,7 @@ export function ImportChatsView() {
   const visibleNames =
     importedNames.length > 0
       ? filterImportableChatNames(importedNames)
-      : sortChats(chats)
-          .filter(isRegularChat)
-          .map((chat) => chat.name);
+      : getSortedRegularChats(chats).map((chat) => chat.name);
 
   return (
     <List isLoading={isLoading || isImporting} searchBarPlaceholder="Search imported KakaoTalk chats...">

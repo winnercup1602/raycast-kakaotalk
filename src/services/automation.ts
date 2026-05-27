@@ -2,7 +2,7 @@ import { getApplications } from "@raycast/api";
 import { runAppleScript } from "@raycast/utils";
 import { KakaoChat } from "../types";
 import { AutomationSettings } from "../utils/preferences";
-import { getAutomationSearchName, getExpectedWindowTitle, isQuietChatFolder } from "../utils/chat";
+import { getAutomationSearchName, isQuietChatFolder } from "../utils/chat";
 
 export const KAKAOTALK_BUNDLE_ID = "com.kakao.KakaoTalkMac";
 
@@ -82,15 +82,16 @@ async function runChatAutomation(
   await ensureKakaoTalkInstalled();
 
   const searchName = getAutomationSearchName(chat);
-  const expectedTitle = getExpectedWindowTitle(chat);
   const delaySeconds = String(options.delayMs / 1000);
   const shouldSend = options.shouldSend === true ? "1" : "0";
   const shouldClose = options.closeAfterSend ? "1" : "0";
 
   const result = await runAppleScript(
     CHAT_AUTOMATION_SCRIPT,
-    [searchName, message, shouldSend, shouldClose, delaySeconds, expectedTitle],
-    { timeout: 30000 },
+    [searchName, message, shouldSend, shouldClose, delaySeconds],
+    {
+      timeout: 30000,
+    },
   );
 
   return result.trim();
@@ -103,7 +104,6 @@ on run argv
   set shouldSend to item 3 of argv is "1"
   set shouldClose to item 4 of argv is "1"
   set delaySeconds to item 5 of argv as real
-  set expectedTitle to item 6 of argv
   set previousClipboard to missing value
   set openedTitle to ""
 
@@ -118,42 +118,16 @@ on run argv
       if UI elements enabled is false then error "ACCESSIBILITY_PERMISSION_REQUIRED"
     end tell
 
-    tell application id "com.kakao.KakaoTalkMac"
-      reopen
-      activate
-    end tell
-
-    delay delaySeconds
-
-    tell application "System Events"
-      if not (exists process "KakaoTalk") then error "KAKAOTALK_NOT_RUNNING"
-      tell process "KakaoTalk"
-        set frontmost to true
-        if exists window "카카오톡" then
-          perform action "AXRaise" of window "카카오톡"
-        end if
-      end tell
-    end tell
-
-    delay delaySeconds
-
-    my activateRootChatTab(delaySeconds)
-
+    my ensureKakaoTalkFrontmost()
     my searchAndOpenChat(chatName, delaySeconds)
-
-    delay (delaySeconds * 2)
-    set openedTitle to my frontWindowTitle()
-
-    if my titleDoesNotMatch(openedTitle, expectedTitle) then
-      error "CHAT_TITLE_MISMATCH:" & openedTitle
-    end if
+    set openedTitle to my ensureChatWindowFrontmost(delaySeconds)
 
     if shouldSend then
       my pasteAndSendMessage(messageText, delaySeconds)
-      delay delaySeconds
 
       if shouldClose then
         tell application "System Events"
+          my ensureKakaoTalkFrontmost()
           key code 13 using command down
         end tell
       end if
@@ -167,6 +141,56 @@ on run argv
   end try
 end run
 
+on ensureKakaoTalkFrontmost()
+  tell application id "com.kakao.KakaoTalkMac"
+    reopen
+    activate
+  end tell
+
+  tell application "System Events"
+    repeat 50 times
+      if exists process "KakaoTalk" then
+        tell process "KakaoTalk"
+          try
+            set frontmost to true
+          end try
+          try
+            if exists front window then perform action "AXRaise" of front window
+          end try
+        end tell
+
+        delay 0.05
+
+        try
+          if frontmost of process "KakaoTalk" is true then return
+        end try
+      end if
+
+      delay 0.1
+    end repeat
+  end tell
+
+  error "KAKAOTALK_NOT_FRONTMOST"
+end ensureKakaoTalkFrontmost
+
+on waitForMainWindow(delaySeconds)
+  tell application "System Events"
+    repeat 40 times
+      try
+        if exists process "KakaoTalk" then
+          tell process "KakaoTalk"
+            if exists window "카카오톡" then return
+            if (count of windows) > 0 then return
+          end tell
+        end if
+      end try
+      delay delaySeconds
+    end repeat
+  end tell
+
+  error "NO_CHAT_TABLE"
+end waitForMainWindow
+
 on frontWindowTitle()
   tell application "System Events"
     tell process "KakaoTalk"
@@ -178,267 +202,75 @@ on frontWindowTitle()
   return ""
 end frontWindowTitle
 
-on titleDoesNotMatch(openedTitle, expectedTitle)
-  if expectedTitle is "" then return false
-  if openedTitle is "" then return true
-  if openedTitle contains expectedTitle then return false
-  if expectedTitle contains openedTitle then return false
-  return true
-end titleDoesNotMatch
-
-on activateRootChatTab(delaySeconds)
+on activateChatSearch(delaySeconds)
   tell application "System Events"
-    key code 18 using command down
-    delay delaySeconds
+    my ensureKakaoTalkFrontmost()
     key code 19 using command down
   end tell
-end activateRootChatTab
+  delay delaySeconds
+end activateChatSearch
 
 on pasteAndSendMessage(messageText, delaySeconds)
   set the clipboard to messageText
+  delay 0.05
 
   tell application "System Events"
-    set inputArea to my focusMessageInput()
-    delay (delaySeconds / 2)
-    keystroke "v" using command down
-    delay delaySeconds
-
-    set couldReadPastedText to false
-    set pastedText to ""
-    try
-      set pastedText to value of inputArea as text
-      set couldReadPastedText to true
-    end try
-    if couldReadPastedText and pastedText does not contain messageText then error "MESSAGE_PASTE_FAILED"
-  end tell
-
-  my sendFocusedMessage(inputArea, messageText, delaySeconds)
-end pasteAndSendMessage
-
-on sendFocusedMessage(inputArea, messageText, delaySeconds)
-  tell application "System Events"
-    tell process "KakaoTalk"
-      set frontmost to true
-    end tell
-    try
-      set focused of inputArea to true
-    end try
-    key code 36
+    my ensureKakaoTalkFrontmost()
+    key code 9 using command down
   end tell
   delay delaySeconds
-  if not my messageStillInInput(inputArea, messageText) then return
-
-  if my pressSendButton() then
-    delay delaySeconds
-    if not my messageStillInInput(inputArea, messageText) then return
-  end if
-
-  error "MESSAGE_SEND_FAILED"
-end sendFocusedMessage
-
-on messageStillInInput(inputArea, messageText)
-  try
-    set currentText to value of inputArea as text
-    if currentText is "" then return false
-    if currentText contains messageText then return true
-    return false
-  on error
-    try
-      set currentInputArea to my focusMessageInput()
-      set currentText to value of currentInputArea as text
-      if currentText is "" then return false
-      if currentText contains messageText then return true
-    end try
-
-    return false
-  end try
-end messageStillInInput
-
-on pressSendButton()
   tell application "System Events"
-    tell process "KakaoTalk"
-      if not (exists front window) then return false
-      try
-        repeat with candidateButton in entire contents of front window
-          try
-            if role of candidateButton is "AXButton" then
-              set labelText to my uiElementText(candidateButton)
-              if my isSendButtonLabel(labelText) then
-                set buttonEnabled to true
-                try
-                  if enabled of candidateButton is false then set buttonEnabled to false
-                end try
-                if buttonEnabled then
-                  perform action "AXPress" of candidateButton
-                  return true
-                end if
-              end if
-            end if
-          end try
-        end repeat
-      end try
-    end tell
+    my ensureKakaoTalkFrontmost()
+    key code 36
   end tell
-
-  return false
-end pressSendButton
-
-on uiElementText(uiElement)
-  set labelText to ""
-  try
-    set labelText to labelText & " " & (name of uiElement as text)
-  end try
-  try
-    set labelText to labelText & " " & (description of uiElement as text)
-  end try
-  try
-    set labelText to labelText & " " & (value of uiElement as text)
-  end try
-  return labelText
-end uiElementText
-
-on isSendButtonLabel(labelText)
-  if labelText contains "전송" then return true
-  if labelText contains "보내기" then return true
-  if labelText contains "Send" then return true
-  if labelText contains "send" then return true
-  return false
-end isSendButtonLabel
-
-on focusMessageInput()
-  tell application "System Events"
-    tell process "KakaoTalk"
-      if not (exists front window) then error "CHAT_NOT_SENDABLE"
-      set chatWindow to front window
-      set inputCandidates to {}
-
-      try
-        repeat with candidateInput in text areas of chatWindow
-          set end of inputCandidates to candidateInput
-        end repeat
-      end try
-
-      try
-        repeat with candidateInput in entire contents of chatWindow
-          try
-            if role of candidateInput is "AXTextArea" then set end of inputCandidates to candidateInput
-          end try
-        end repeat
-      end try
-
-      repeat with candidateInput in inputCandidates
-        try
-          set inputEnabled to true
-          try
-            if enabled of candidateInput is false then set inputEnabled to false
-          end try
-          if inputEnabled then
-            set focused of candidateInput to true
-            delay 0.1
-            if focused of candidateInput is true then return candidateInput
-          end if
-        end try
-      end repeat
-    end tell
-  end tell
-
-  error "CHAT_NOT_SENDABLE"
-end focusMessageInput
+end pasteAndSendMessage
 
 on searchAndOpenChat(chatName, delaySeconds)
-  my searchForChat(chatName, delaySeconds)
+  my waitForMainWindow(delaySeconds)
+  my activateChatSearch(delaySeconds)
+  my pasteIntoSearchField(chatName, delaySeconds)
 
   tell application "System Events"
-    tell process "KakaoTalk"
-      if not (exists window "카카오톡") then error "NO_CHAT_TABLE"
-      try
-        set tableRef to table 1 of scroll area 1 of window "카카오톡"
-      on error
-        error "NO_CHAT_TABLE"
-      end try
-
-      set rowCount to count of rows of tableRef
-      set rowsToCheck to rowCount
-      if rowsToCheck > 25 then set rowsToCheck to 25
-
-      set matchedIndex to 0
-      repeat with i from 1 to rowsToCheck
-        try
-          set rowText to my uiElementText(row i of tableRef)
-          if rowText is not "" and (rowText contains chatName or chatName contains rowText) then
-            set matchedIndex to i
-            exit repeat
-          end if
-        end try
-      end repeat
-
-      if matchedIndex is 0 then error "CHAT_NOT_FOUND:" & chatName
-      set searchField to my findFocusedSearchField()
-      set focused of searchField to true
-    end tell
-
-    repeat matchedIndex times
-      key code 125
-      delay 0.05
-    end repeat
-    delay (delaySeconds / 2)
+    my ensureKakaoTalkFrontmost()
+    key code 125
+    delay 0.08
     key code 36
   end tell
 end searchAndOpenChat
 
-on searchForChat(chatName, delaySeconds)
+on pasteIntoSearchField(chatName, delaySeconds)
   set the clipboard to chatName
+  delay 0.05
 
   tell application "System Events"
-    tell process "KakaoTalk"
-      if not (exists window "카카오톡") then error "NO_CHAT_TABLE"
-      set frontmost to true
-      perform action "AXRaise" of window "카카오톡"
-    end tell
-
+    my ensureKakaoTalkFrontmost()
     key code 3 using command down
-    delay delaySeconds
-
-    set searchField to my findFocusedSearchField()
-    try
-      set focused of searchField to true
-    end try
-    keystroke "a" using command down
+    delay (delaySeconds / 2)
+    key code 0 using command down
     delay 0.05
     key code 51
-    delay (delaySeconds / 2)
-    keystroke "v" using command down
+    delay 0.05
+    key code 9 using command down
   end tell
+  delay delaySeconds
+end pasteIntoSearchField
 
-  delay (delaySeconds * 3)
-end searchForChat
+on ensureChatWindowFrontmost(delaySeconds)
+  repeat 50 times
+    set currentTitle to my frontWindowTitle()
+    if currentTitle is not "" and currentTitle is not "카카오톡" then return currentTitle
 
-on findFocusedSearchField()
-  tell application "System Events"
-    tell process "KakaoTalk"
-      if not (exists window "카카오톡") then error "NO_CHAT_TABLE"
-      set mainWindow to window "카카오톡"
-
-      try
-        repeat with candidateInput in entire contents of mainWindow
-          try
-            if role of candidateInput is "AXTextField" and focused of candidateInput is true then return candidateInput
-          end try
-        end repeat
-      end try
-
-      try
-        repeat with candidateInput in entire contents of mainWindow
-          try
-            if role of candidateInput is "AXTextField" then return candidateInput
-          end try
-        end repeat
-      end try
+    tell application "System Events"
+      if not (exists process "KakaoTalk") then error "KAKAOTALK_NOT_RUNNING"
+      my ensureKakaoTalkFrontmost()
+      key code 36
     end tell
-  end tell
 
-  error "NO_CHAT_SEARCH_FIELD"
-end findFocusedSearchField
+    delay delaySeconds
+  end repeat
+
+  error "CHAT_OPEN_FAILED"
+end ensureChatWindowFrontmost
 
 on restoreClipboard(previousClipboard)
   try

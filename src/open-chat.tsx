@@ -7,14 +7,14 @@ import { useKakaoChats } from "./hooks/use-kakao-chats";
 import { openChat } from "./services/automation";
 import { touchChat } from "./storage";
 import { KakaoChat } from "./types";
-import { getChatKeywords, getChatSubtitle, isRegularChat, sortChats } from "./utils/chat";
+import { getChatKeywords, getChatSubtitle, getSortedRegularChats } from "./utils/chat";
 import { getErrorMessage } from "./utils/errors";
 import { getAutomationSettings } from "./utils/preferences";
 
 export default function OpenChat() {
   const { chats, isLoading, setChats, reload } = useKakaoChats();
   const [selectedItemId, setSelectedItemId] = useState<string>();
-  const sortedChats = sortChats(chats).filter(isRegularChat);
+  const sortedChats = getSortedRegularChats(chats);
 
   async function handleOpen(chat: KakaoChat) {
     const toast = await showToast({

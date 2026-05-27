@@ -2,16 +2,31 @@ import { randomUUID } from "node:crypto";
 import { KakaoChat } from "../types";
 
 export const QUIET_CHAT_FOLDER_NAME = "조용한 채팅방";
+export const SELF_CHAT_NAME = "나와의 채팅";
 
 export function parseAliases(value?: string): string[] {
   if (!value) {
     return [];
   }
 
+  const seen = new Set<string>();
+
   return value
     .split(/[\n,]/)
     .map((alias) => alias.trim())
-    .filter(Boolean);
+    .filter((alias) => {
+      if (!alias) {
+        return false;
+      }
+
+      const normalizedAlias = normalizeQuery(alias);
+      if (seen.has(normalizedAlias)) {
+        return false;
+      }
+
+      seen.add(normalizedAlias);
+      return true;
+    });
 }
 
 export function formatAliases(aliases: string[]): string {
@@ -66,6 +81,14 @@ export function isRegularChat(chat: KakaoChat): boolean {
   return !isQuietChatFolder(chat);
 }
 
+export function getRegularChats(chats: KakaoChat[]): KakaoChat[] {
+  return chats.filter(isRegularChat);
+}
+
+export function getSortedRegularChats(chats: KakaoChat[]): KakaoChat[] {
+  return sortChats(chats).filter(isRegularChat);
+}
+
 export function isImportableChatName(name: string): boolean {
   return Boolean(name.trim()) && !isQuietChatFolderName(name);
 }
@@ -80,23 +103,33 @@ export function findChatByName(chats: KakaoChat[], name: string): KakaoChat | un
     return undefined;
   }
 
+  const candidates = getRegularChats(chats).map((chat) => ({
+    chat,
+    names: getChatCandidates(chat).map(normalizeQuery),
+  }));
+
   return (
-    chats.find(
-      (chat) => isRegularChat(chat) && getChatCandidates(chat).some((candidate) => normalizeQuery(candidate) === query),
-    ) ??
-    chats.find(
-      (chat) =>
-        isRegularChat(chat) && getChatCandidates(chat).some((candidate) => normalizeQuery(candidate).includes(query)),
-    )
+    candidates.find((candidate) => candidate.names.some((nameCandidate) => nameCandidate === query))?.chat ??
+    candidates.find((candidate) => candidate.names.some((nameCandidate) => nameCandidate.includes(query)))?.chat
   );
 }
 
-export function getAutomationSearchName(chat: KakaoChat): string {
-  return chat.selfChat ? "나와의 채팅" : chat.searchName;
+export function requireChatByName(chats: KakaoChat[], name: string): KakaoChat {
+  const query = name.trim();
+  if (!query) {
+    throw new Error("Chat name cannot be empty.");
+  }
+
+  const chat = findChatByName(chats, query);
+  if (!chat) {
+    throw new Error(`No saved KakaoTalk chat matches "${name}".`);
+  }
+
+  return chat;
 }
 
-export function getExpectedWindowTitle(chat: KakaoChat): string {
-  return chat.selfChat ? "나와의 채팅" : chat.searchName || chat.name;
+export function getAutomationSearchName(chat: KakaoChat): string {
+  return chat.selfChat ? SELF_CHAT_NAME : chat.searchName;
 }
 
 export function mergeImportedChatNames(
@@ -105,13 +138,13 @@ export function mergeImportedChatNames(
 ): { chats: KakaoChat[]; added: number; skipped: number } {
   const now = new Date().toISOString();
   const nextChats = [...chats];
-  const existingNames = new Map<string, number>();
+  const existingNames = new Set<string>();
   let added = 0;
   let skipped = 0;
 
-  nextChats.forEach((chat, index) => {
+  nextChats.forEach((chat) => {
     for (const candidate of getChatCandidates(chat)) {
-      existingNames.set(normalizeQuery(candidate), index);
+      existingNames.add(normalizeQuery(candidate));
     }
   });
 
@@ -128,25 +161,27 @@ export function mergeImportedChatNames(
       continue;
     }
 
-    const existingIndex = existingNames.get(normalizedName);
-    if (existingIndex !== undefined) {
+    if (existingNames.has(normalizedName)) {
       continue;
     }
 
-    const isSelfChat = trimmedName === "나와의 채팅";
-    nextChats.push({
-      id: createChatId(),
-      name: trimmedName,
-      searchName: trimmedName,
-      aliases: [],
-      pinned: false,
-      selfChat: isSelfChat,
-      createdAt: now,
-      updatedAt: now,
-    });
-    existingNames.set(normalizedName, nextChats.length - 1);
+    nextChats.push(createImportedChat(trimmedName, now));
+    existingNames.add(normalizedName);
     added += 1;
   }
 
   return { chats: nextChats, added, skipped };
+}
+
+function createImportedChat(name: string, timestamp: string): KakaoChat {
+  return {
+    id: createChatId(),
+    name,
+    searchName: name,
+    aliases: [],
+    pinned: false,
+    selfChat: name === SELF_CHAT_NAME,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
 }

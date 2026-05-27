@@ -25,26 +25,44 @@ export async function saveChats(chats: KakaoChat[]): Promise<void> {
   await LocalStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
 }
 
+export async function upsertChat(nextChat: KakaoChat): Promise<void> {
+  await updateChats((chats) => {
+    const hasExistingChat = chats.some((chat) => chat.id === nextChat.id);
+
+    if (hasExistingChat) {
+      return chats.map((chat) => (chat.id === nextChat.id ? nextChat : chat));
+    }
+
+    return [...chats, nextChat];
+  });
+}
+
 export async function touchChat(chatId: string): Promise<KakaoChat | undefined> {
-  const chats = await getChats();
   const now = new Date().toISOString();
   let touchedChat: KakaoChat | undefined;
 
-  const nextChats = chats.map((chat) => {
-    if (chat.id !== chatId) {
-      return chat;
-    }
+  await updateChats((chats) =>
+    chats.map((chat) => {
+      if (chat.id !== chatId) {
+        return chat;
+      }
 
-    touchedChat = {
-      ...chat,
-      lastOpened: Date.now(),
-      updatedAt: now,
-    };
-    return touchedChat;
-  });
+      touchedChat = {
+        ...chat,
+        lastOpened: Date.now(),
+        updatedAt: now,
+      };
+      return touchedChat;
+    }),
+  );
 
-  await saveChats(nextChats);
   return touchedChat;
+}
+
+async function updateChats(updater: (chats: KakaoChat[]) => KakaoChat[]): Promise<void> {
+  const chats = await getChats();
+  const nextChats = updater(chats);
+  await saveChats(nextChats);
 }
 
 function normalizeChat(value: unknown): KakaoChat | undefined {

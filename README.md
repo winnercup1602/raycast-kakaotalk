@@ -48,7 +48,7 @@ This extension stores only the chat names and aliases you add in Raycast local s
 
 ## Notes
 
-Message sending uses the KakaoTalk desktop UI. If a chat cannot be opened or the active chat window title does not match the saved chat name, the extension stops before sending. Chat import reads chat names from the KakaoTalk list only; it does not read message contents. KakaoTalk's `조용한 채팅방` folder row is skipped during import because the actual muted rooms are still searchable by name.
+Message sending uses the KakaoTalk desktop UI. If a chat cannot be opened, the extension stops before sending. Chat import reads chat names from the KakaoTalk list only; it does not read message contents. KakaoTalk's `조용한 채팅방` folder row is skipped during import because the actual muted rooms are still searchable by name.
 
 ## License
 
