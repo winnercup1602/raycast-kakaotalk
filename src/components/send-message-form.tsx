@@ -29,12 +29,11 @@ export function SendMessageForm({ defaultChatId }: SendMessageFormProps) {
   const { chats, isLoading } = useKakaoChats();
   const { pop } = useNavigation();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedChatId, setSelectedChatId] = useState(defaultChatId);
+  const [selectedChatId, setSelectedChatId] = useState(defaultChatId ?? "");
   const sortedChats = sortChats(chats);
-  const fallbackChatId = defaultChatId ?? sortedChats[0]?.id;
 
   async function handleSubmit(values: SendMessageFormValues) {
-    const chat = chats.find((item) => item.id === values.chatId) ?? chats.find((item) => item.id === fallbackChatId);
+    const chat = chats.find((item) => item.id === values.chatId);
     const message = values.message.trim();
 
     if (!chat) {
@@ -108,18 +107,19 @@ export function SendMessageForm({ defaultChatId }: SendMessageFormProps) {
         </ActionPanel>
       }
     >
-      <Form.Dropdown id="chatId" title="Chat" defaultValue={fallbackChatId} onChange={setSelectedChatId}>
+      <Form.Dropdown id="chatId" title="Chat" defaultValue={defaultChatId ?? ""} onChange={setSelectedChatId}>
+        {!defaultChatId ? <Form.Dropdown.Item value="" title="Select a chat..." icon={Icon.Circle} /> : null}
         {sortedChats.map((chat) => (
           <Form.Dropdown.Item key={chat.id} value={chat.id} title={chat.name} icon={Icon.Message} />
         ))}
       </Form.Dropdown>
-      <Form.Description text={getSelectedChatDescription(sortedChats, selectedChatId ?? fallbackChatId)} />
-      <Form.TextArea id="message" title="Message" placeholder="Type a message to send..." autoFocus={!defaultChatId} />
+      <Form.Description text={getSelectedChatDescription(sortedChats, selectedChatId)} />
+      <Form.TextArea id="message" title="Message" placeholder="Type a message to send..." />
     </Form>
   );
 }
 
-function getSelectedChatDescription(chats: ReturnType<typeof sortChats>, defaultChatId?: string): string {
-  const chat = chats.find((item) => item.id === defaultChatId) ?? chats[0];
-  return chat ? `Target: ${chat.name} (${getChatSubtitle(chat)})` : "";
+function getSelectedChatDescription(chats: ReturnType<typeof sortChats>, selectedChatId: string): string {
+  const chat = chats.find((item) => item.id === selectedChatId);
+  return chat ? `Target: ${chat.name} (${getChatSubtitle(chat)})` : "Select a chat before writing the message.";
 }

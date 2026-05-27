@@ -115,7 +115,6 @@ function ChatListItem({ chat, onOpen, onPin, onDelete }: ChatListItemProps) {
               title="Send Message"
               icon={Icon.Message}
               target={<SendMessageForm defaultChatId={chat.id} />}
-              shortcut={{ modifiers: ["cmd"], key: "return" }}
             />
           </ActionPanel.Section>
           <ActionPanel.Section>
