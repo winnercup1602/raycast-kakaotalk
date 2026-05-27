@@ -36,7 +36,7 @@ function normalizeAutomationError(message: string): string {
   }
 
   if (message.includes("MESSAGE_SEND_FAILED")) {
-    return "The message was entered, but KakaoTalk did not send it. Check whether this chat requires a different send shortcut or blocks replies.";
+    return "The message was entered, but KakaoTalk did not send it. The send button may not be available, or this chat may block replies.";
   }
 
   if (message.includes("QUIET_CHAT_FOLDER_NOT_CHAT")) {

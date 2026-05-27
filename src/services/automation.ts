@@ -217,13 +217,13 @@ end pasteAndSendMessage
 
 on sendFocusedMessage(inputArea, messageText, delaySeconds)
   tell application "System Events"
+    tell process "KakaoTalk"
+      set frontmost to true
+    end tell
+    try
+      set focused of inputArea to true
+    end try
     key code 36
-  end tell
-  delay delaySeconds
-  if not my messageStillInInput(inputArea, messageText) then return
-
-  tell application "System Events"
-    key code 36 using command down
   end tell
   delay delaySeconds
   if not my messageStillInInput(inputArea, messageText) then return
