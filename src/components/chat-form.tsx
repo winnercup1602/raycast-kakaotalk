@@ -2,7 +2,7 @@ import { Action, ActionPanel, Form, Icon, showToast, Toast, useNavigation } from
 import { useState } from "react";
 import { upsertChat } from "../storage";
 import { ChatFormValues, KakaoChat } from "../types";
-import { SELF_CHAT_NAME, createChatId, formatAliases, isQuietChatFolderName, parseAliases } from "../utils/chat";
+import { createChatId, formatAliases, isQuietChatFolderName, parseAliases } from "../utils/chat";
 import { getErrorMessage } from "../utils/errors";
 
 interface ChatFormProps {
@@ -19,7 +19,7 @@ export function ChatForm({ chat }: ChatFormProps) {
 
     try {
       const name = values.name.trim();
-      const searchName = values.selfChat ? SELF_CHAT_NAME : (values.searchName || values.name).trim();
+      const searchName = (values.searchName || values.name).trim();
 
       if (!name) {
         throw new Error("Display name is required.");
@@ -84,7 +84,7 @@ export function ChatForm({ chat }: ChatFormProps) {
         title="KakaoTalk Search Name"
         placeholder="Exact chat name KakaoTalk can find"
         defaultValue={chat?.searchName}
-        info="Use the exact name that appears in KakaoTalk chat search."
+        info="Use the exact name shown in KakaoTalk chat search."
       />
       <Form.TextArea
         id="aliases"

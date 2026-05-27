@@ -129,7 +129,7 @@ export function requireChatByName(chats: KakaoChat[], name: string): KakaoChat {
 }
 
 export function getAutomationSearchName(chat: KakaoChat): string {
-  return chat.selfChat ? SELF_CHAT_NAME : chat.searchName;
+  return chat.searchName || chat.name;
 }
 
 export function mergeImportedChatNames(
