@@ -359,8 +359,14 @@ on searchAndOpenChat(chatName, delaySeconds)
       set focused of searchField to true
       set value of searchField to ""
       delay (delaySeconds / 2)
-      set value of searchField to chatName
     end tell
+
+    set the clipboard to chatName
+    keystroke "a" using command down
+    delay 0.05
+    key code 51
+    delay (delaySeconds / 2)
+    keystroke "v" using command down
 
     delay (delaySeconds * 2)
 
