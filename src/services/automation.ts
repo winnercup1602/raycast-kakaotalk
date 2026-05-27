@@ -346,31 +346,11 @@ on focusMessageInput()
 end focusMessageInput
 
 on searchAndOpenChat(chatName, delaySeconds)
+  my searchForChat(chatName, delaySeconds)
+
   tell application "System Events"
     tell process "KakaoTalk"
       if not (exists window "카카오톡") then error "NO_CHAT_TABLE"
-      set mainWindow to window "카카오톡"
-      try
-        set searchField to text field 1 of mainWindow
-      on error
-        error "NO_CHAT_SEARCH_FIELD"
-      end try
-
-      set focused of searchField to true
-      set value of searchField to ""
-      delay (delaySeconds / 2)
-    end tell
-
-    set the clipboard to chatName
-    keystroke "a" using command down
-    delay 0.05
-    key code 51
-    delay (delaySeconds / 2)
-    keystroke "v" using command down
-
-    delay (delaySeconds * 2)
-
-    tell process "KakaoTalk"
       try
         set tableRef to table 1 of scroll area 1 of window "카카오톡"
       on error
@@ -384,9 +364,8 @@ on searchAndOpenChat(chatName, delaySeconds)
       set matchedIndex to 0
       repeat with i from 1 to rowsToCheck
         try
-          set cellRef to UI element 1 of row i of tableRef
-          set rowName to value of static text 1 of cellRef as text
-          if rowName is chatName or rowName contains chatName or chatName contains rowName then
+          set rowText to my uiElementText(row i of tableRef)
+          if rowText is not "" and (rowText contains chatName or chatName contains rowText) then
             set matchedIndex to i
             exit repeat
           end if
@@ -394,7 +373,8 @@ on searchAndOpenChat(chatName, delaySeconds)
       end repeat
 
       if matchedIndex is 0 then error "CHAT_NOT_FOUND:" & chatName
-      set focused of text field 1 of window "카카오톡" to true
+      set searchField to my findFocusedSearchField()
+      set focused of searchField to true
     end tell
 
     repeat matchedIndex times
@@ -405,6 +385,60 @@ on searchAndOpenChat(chatName, delaySeconds)
     key code 36
   end tell
 end searchAndOpenChat
+
+on searchForChat(chatName, delaySeconds)
+  set the clipboard to chatName
+
+  tell application "System Events"
+    tell process "KakaoTalk"
+      if not (exists window "카카오톡") then error "NO_CHAT_TABLE"
+      set frontmost to true
+      perform action "AXRaise" of window "카카오톡"
+    end tell
+
+    key code 3 using command down
+    delay delaySeconds
+
+    set searchField to my findFocusedSearchField()
+    try
+      set focused of searchField to true
+    end try
+    keystroke "a" using command down
+    delay 0.05
+    key code 51
+    delay (delaySeconds / 2)
+    keystroke "v" using command down
+  end tell
+
+  delay (delaySeconds * 3)
+end searchForChat
+
+on findFocusedSearchField()
+  tell application "System Events"
+    tell process "KakaoTalk"
+      if not (exists window "카카오톡") then error "NO_CHAT_TABLE"
+      set mainWindow to window "카카오톡"
+
+      try
+        repeat with candidateInput in entire contents of mainWindow
+          try
+            if role of candidateInput is "AXTextField" and focused of candidateInput is true then return candidateInput
+          end try
+        end repeat
+      end try
+
+      try
+        repeat with candidateInput in entire contents of mainWindow
+          try
+            if role of candidateInput is "AXTextField" then return candidateInput
+          end try
+        end repeat
+      end try
+    end tell
+  end tell
+
+  error "NO_CHAT_SEARCH_FIELD"
+end findFocusedSearchField
 
 on restoreClipboard(previousClipboard)
   try
