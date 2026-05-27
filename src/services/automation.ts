@@ -153,9 +153,7 @@ on run argv
       delay delaySeconds
 
       if shouldClose then
-        tell application "System Events"
-          key code 13 using command down
-        end tell
+        my closeFrontChatWindow()
       end if
     end if
 
@@ -188,28 +186,47 @@ end titleDoesNotMatch
 
 on activateRootChatTab(delaySeconds)
   tell application "System Events"
-    key code 18 using command down
-    delay delaySeconds
-    key code 19 using command down
+    tell process "KakaoTalk"
+      if exists window "카카오톡" then
+        set mainWindow to window "카카오톡"
+        try
+          repeat with candidateButton in entire contents of mainWindow
+            try
+              if role of candidateButton is "AXButton" then
+                set labelText to my uiElementText(candidateButton)
+                if labelText contains "채팅" or labelText contains "Chat" or labelText contains "chat" then
+                  set buttonEnabled to true
+                  try
+                    if enabled of candidateButton is false then set buttonEnabled to false
+                  end try
+                  if buttonEnabled then
+                    perform action "AXPress" of candidateButton
+                    delay delaySeconds
+                    return
+                  end if
+                end if
+              end if
+            end try
+          end repeat
+        end try
+      end if
+    end tell
   end tell
 end activateRootChatTab
 
 on pasteAndSendMessage(messageText, delaySeconds)
-  set the clipboard to messageText
-
   tell application "System Events"
     set inputArea to my focusMessageInput()
-    delay (delaySeconds / 2)
-    keystroke "v" using command down
-    delay delaySeconds
-
-    set couldReadPastedText to false
-    set pastedText to ""
+    set didSetMessageText to false
     try
-      set pastedText to value of inputArea as text
-      set couldReadPastedText to true
+      set value of inputArea to ""
+      delay (delaySeconds / 2)
+      set value of inputArea to messageText
+      set didSetMessageText to true
     end try
-    if couldReadPastedText and pastedText does not contain messageText then error "MESSAGE_PASTE_FAILED"
+    if not didSetMessageText then error "MESSAGE_INPUT_FAILED"
+    delay delaySeconds
+    if not my messageStillInInput(inputArea, messageText) then error "MESSAGE_INPUT_FAILED"
   end tell
 
   my sendFocusedMessage(inputArea, messageText, delaySeconds)
@@ -235,6 +252,18 @@ on sendFocusedMessage(inputArea, messageText, delaySeconds)
 
   error "MESSAGE_SEND_FAILED"
 end sendFocusedMessage
+
+on closeFrontChatWindow()
+  tell application "System Events"
+    tell process "KakaoTalk"
+      if exists front window then
+        try
+          perform action "AXClose" of front window
+        end try
+      end if
+    end tell
+  end tell
+end closeFrontChatWindow
 
 on messageStillInInput(inputArea, messageText)
   try
@@ -472,9 +501,45 @@ end run
 
 on activateRootChatTab(delaySeconds)
   tell application "System Events"
-    key code 18 using command down
-    delay delaySeconds
-    key code 19 using command down
+    tell process "KakaoTalk"
+      if exists window "카카오톡" then
+        set mainWindow to window "카카오톡"
+        try
+          repeat with candidateButton in entire contents of mainWindow
+            try
+              if role of candidateButton is "AXButton" then
+                set labelText to my uiElementText(candidateButton)
+                if labelText contains "채팅" or labelText contains "Chat" or labelText contains "chat" then
+                  set buttonEnabled to true
+                  try
+                    if enabled of candidateButton is false then set buttonEnabled to false
+                  end try
+                  if buttonEnabled then
+                    perform action "AXPress" of candidateButton
+                    delay delaySeconds
+                    return
+                  end if
+                end if
+              end if
+            end try
+          end repeat
+        end try
+      end if
+    end tell
   end tell
 end activateRootChatTab
+
+on uiElementText(uiElement)
+  set labelText to ""
+  try
+    set labelText to labelText & " " & (name of uiElement as text)
+  end try
+  try
+    set labelText to labelText & " " & (description of uiElement as text)
+  end try
+  try
+    set labelText to labelText & " " & (value of uiElement as text)
+  end try
+  return labelText
+end uiElementText
 `;

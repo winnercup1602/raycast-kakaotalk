@@ -31,8 +31,8 @@ function normalizeAutomationError(message: string): string {
     return "This KakaoTalk chat does not appear to have an active message input, so no message was sent. Open the chat manually to check whether replies are allowed.";
   }
 
-  if (message.includes("MESSAGE_PASTE_FAILED")) {
-    return "KakaoTalk did not accept the message text, so no message was sent. Try again after opening the chat manually.";
+  if (message.includes("MESSAGE_INPUT_FAILED") || message.includes("MESSAGE_PASTE_FAILED")) {
+    return "KakaoTalk did not accept the message text in the chat input, so no message was sent. Try again after opening the chat manually.";
   }
 
   if (message.includes("MESSAGE_SEND_FAILED")) {
