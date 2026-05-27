@@ -1,0 +1,192 @@
+import { getApplications } from "@raycast/api";
+import { runAppleScript } from "@raycast/utils";
+import { KakaoChat } from "../types";
+import { AutomationSettings } from "../utils/preferences";
+import { getAutomationSearchName, getExpectedWindowTitle } from "../utils/chat";
+
+export const KAKAOTALK_BUNDLE_ID = "com.kakao.KakaoTalkMac";
+
+interface OpenChatOptions extends AutomationSettings {
+  shouldSend?: false;
+}
+
+interface SendMessageOptions extends AutomationSettings {
+  shouldSend: true;
+}
+
+export async function openKakaoTalk(): Promise<void> {
+  await ensureKakaoTalkInstalled();
+
+  await runAppleScript(
+    `
+tell application id "${KAKAOTALK_BUNDLE_ID}"
+  reopen
+  activate
+end tell
+`,
+    { timeout: 10000 },
+  );
+}
+
+export async function openChat(chat: KakaoChat, options: OpenChatOptions): Promise<string> {
+  return runChatAutomation(chat, "", options);
+}
+
+export async function sendMessageToChat(
+  chat: KakaoChat,
+  message: string,
+  options: SendMessageOptions,
+): Promise<string> {
+  return runChatAutomation(chat, message, options);
+}
+
+async function ensureKakaoTalkInstalled(): Promise<void> {
+  const applications = await getApplications();
+  const hasKakaoTalk = applications.some((application) => application.bundleId === KAKAOTALK_BUNDLE_ID);
+
+  if (!hasKakaoTalk) {
+    throw new Error("KAKAOTALK_NOT_INSTALLED");
+  }
+}
+
+async function runChatAutomation(
+  chat: KakaoChat,
+  message: string,
+  options: OpenChatOptions | SendMessageOptions,
+): Promise<string> {
+  await ensureKakaoTalkInstalled();
+
+  const searchName = getAutomationSearchName(chat);
+  const expectedTitle = getExpectedWindowTitle(chat);
+  const delaySeconds = String(options.delayMs / 1000);
+  const shouldSend = options.shouldSend === true ? "1" : "0";
+  const shouldClose = options.closeAfterSend ? "1" : "0";
+
+  const result = await runAppleScript(
+    CHAT_AUTOMATION_SCRIPT,
+    [searchName, message, shouldSend, shouldClose, delaySeconds, expectedTitle],
+    { timeout: 30000 },
+  );
+
+  return result.trim();
+}
+
+const CHAT_AUTOMATION_SCRIPT = `
+on run argv
+  set chatName to item 1 of argv
+  set messageText to item 2 of argv
+  set shouldSend to item 3 of argv is "1"
+  set shouldClose to item 4 of argv is "1"
+  set delaySeconds to item 5 of argv as real
+  set expectedTitle to item 6 of argv
+  set previousClipboard to missing value
+  set openedTitle to ""
+
+  try
+    set previousClipboard to the clipboard as text
+  end try
+
+  try
+    if shouldSend and messageText is "" then error "EMPTY_MESSAGE"
+
+    tell application "System Events"
+      if UI elements enabled is false then error "ACCESSIBILITY_PERMISSION_REQUIRED"
+    end tell
+
+    tell application id "com.kakao.KakaoTalkMac"
+      reopen
+      activate
+    end tell
+
+    delay delaySeconds
+
+    tell application "System Events"
+      if not (exists process "KakaoTalk") then error "KAKAOTALK_NOT_RUNNING"
+      tell process "KakaoTalk"
+        set frontmost to true
+        if exists window "카카오톡" then
+          perform action "AXRaise" of window "카카오톡"
+        end if
+      end tell
+    end tell
+
+    delay delaySeconds
+
+    tell application "System Events"
+      key code 19 using command down
+    end tell
+
+    delay delaySeconds
+    set the clipboard to chatName
+
+    tell application "System Events"
+      key code 3 using command down
+      delay delaySeconds
+      key code 0 using command down
+      delay (delaySeconds / 2)
+      keystroke "v" using command down
+      delay delaySeconds
+      key code 125
+      delay (delaySeconds / 2)
+      key code 36
+    end tell
+
+    delay (delaySeconds * 2)
+    set openedTitle to my frontWindowTitle()
+
+    if my titleDoesNotMatch(openedTitle, expectedTitle) then
+      error "CHAT_TITLE_MISMATCH:" & openedTitle
+    end if
+
+    if shouldSend then
+      set the clipboard to messageText
+      delay (delaySeconds / 2)
+      tell application "System Events"
+        keystroke "v" using command down
+        delay delaySeconds
+        key code 36
+      end tell
+      delay delaySeconds
+
+      if shouldClose then
+        tell application "System Events"
+          key code 13 using command down
+        end tell
+      end if
+    end if
+
+    my restoreClipboard(previousClipboard)
+    return openedTitle
+  on error errMsg number errNo
+    my restoreClipboard(previousClipboard)
+    error errMsg number errNo
+  end try
+end run
+
+on frontWindowTitle()
+  tell application "System Events"
+    tell process "KakaoTalk"
+      if exists front window then
+        return name of front window
+      end if
+    end tell
+  end tell
+  return ""
+end frontWindowTitle
+
+on titleDoesNotMatch(openedTitle, expectedTitle)
+  if expectedTitle is "" then return false
+  if openedTitle is "" then return true
+  if openedTitle contains expectedTitle then return false
+  if expectedTitle contains openedTitle then return false
+  return true
+end titleDoesNotMatch
+
+on restoreClipboard(previousClipboard)
+  try
+    if previousClipboard is not missing value then
+      set the clipboard to previousClipboard
+    end if
+  end try
+end restoreClipboard
+`;

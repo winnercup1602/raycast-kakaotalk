@@ -1,0 +1,117 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "kakaotalk",
+  "title": "KakaoTalk",
+  "description": "Open saved KakaoTalk chats and send messages through the native macOS app.",
+  "icon": "icon.png",
+  "author": "winnercup1602",
+  "categories": [
+    "Communication",
+    "Productivity"
+  ],
+  "keywords": [
+    "kakao",
+    "katalk",
+    "chat",
+    "message"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "macOS"
+  ],
+  "commands": [
+    {
+      "name": "open-chat",
+      "title": "Open Chat",
+      "subtitle": "KakaoTalk",
+      "description": "Search saved KakaoTalk chats and open them in the native macOS app.",
+      "mode": "view"
+    },
+    {
+      "name": "add-chat",
+      "title": "Add Chat",
+      "subtitle": "KakaoTalk",
+      "description": "Save a KakaoTalk chat so it can be opened or messaged from Raycast.",
+      "mode": "view"
+    },
+    {
+      "name": "send-message",
+      "title": "Send Message",
+      "subtitle": "KakaoTalk",
+      "description": "Send a message to a saved KakaoTalk chat through the native macOS app.",
+      "mode": "view"
+    },
+    {
+      "name": "open-kakaotalk",
+      "title": "Open KakaoTalk",
+      "subtitle": "KakaoTalk",
+      "description": "Open or activate the native KakaoTalk app.",
+      "mode": "no-view"
+    }
+  ],
+  "tools": [
+    {
+      "name": "open-chat",
+      "title": "Open KakaoTalk Chat",
+      "description": "Opens a saved KakaoTalk chat in the native macOS app. Use only when the user explicitly asks to open a chat."
+    },
+    {
+      "name": "send-message",
+      "title": "Send KakaoTalk Message",
+      "description": "Sends a message to a saved KakaoTalk chat using local UI automation. Always confirm the recipient and message with the user before sending."
+    }
+  ],
+  "preferences": [
+    {
+      "name": "confirmBeforeSend",
+      "title": "Confirm Before Sending",
+      "label": "Ask before sending messages from commands",
+      "description": "When enabled, Raycast asks for confirmation before command-based message sending. AI tools always request confirmation.",
+      "type": "checkbox",
+      "required": false,
+      "default": false
+    },
+    {
+      "name": "closeChatWindowAfterSend",
+      "title": "Close Chat Window",
+      "label": "Close the chat window after sending",
+      "description": "Close the active KakaoTalk chat window after a message is sent.",
+      "type": "checkbox",
+      "required": false,
+      "default": false
+    },
+    {
+      "name": "automationDelayMs",
+      "title": "Automation Delay",
+      "description": "Delay in milliseconds between KakaoTalk UI automation steps. Increase this if your Mac opens chats slowly.",
+      "type": "textfield",
+      "required": false,
+      "default": "500",
+      "placeholder": "500"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.104.18",
+    "@raycast/utils": "^2.2.5"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^2.1.1",
+    "@types/node": "^25.2.3",
+    "@types/react": "^19.2.14",
+    "eslint": "^9.39.3",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "prepublishOnly": "echo \"\\n\\nIt seems like you are trying to publish the Raycast extension to npm.\\n\\nIf you wanted to publish it to the Raycast Store, use \\`npm run publish\\` instead.\\n\\n\" && exit 1",
+    "publish": "npx @raycast/api@latest publish"
+  },
+  "volta": {
+    "node": "22.22.2",
+    "npm": "10.9.2"
+  }
+}
