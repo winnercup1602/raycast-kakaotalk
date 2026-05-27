@@ -40,6 +40,19 @@ export async function sendMessageToChat(
   return runChatAutomation(chat, message, options);
 }
 
+export async function importChatNames(options: { delayMs: number; limit: number }): Promise<string[]> {
+  await ensureKakaoTalkInstalled();
+
+  const result = await runAppleScript(IMPORT_CHATS_SCRIPT, [String(options.limit), String(options.delayMs / 1000)], {
+    timeout: 120000,
+  });
+
+  return result
+    .split("\u001f")
+    .map((name) => name.trim())
+    .filter(Boolean);
+}
+
 async function ensureKakaoTalkInstalled(): Promise<void> {
   const applications = await getApplications();
   const hasKakaoTalk = applications.some((application) => application.bundleId === KAKAOTALK_BUNDLE_ID);
@@ -189,4 +202,66 @@ on restoreClipboard(previousClipboard)
     end if
   end try
 end restoreClipboard
+`;
+
+const IMPORT_CHATS_SCRIPT = `
+on run argv
+  set maxRows to item 1 of argv as integer
+  set delaySeconds to item 2 of argv as real
+  set importedNames to {}
+  set delimiterText to ASCII character 31
+
+  tell application "System Events"
+    if UI elements enabled is false then error "ACCESSIBILITY_PERMISSION_REQUIRED"
+  end tell
+
+  tell application id "com.kakao.KakaoTalkMac"
+    reopen
+    activate
+  end tell
+
+  delay delaySeconds
+
+  tell application "System Events"
+    if not (exists process "KakaoTalk") then error "KAKAOTALK_NOT_RUNNING"
+    tell process "KakaoTalk"
+      set frontmost to true
+      if exists window "카카오톡" then
+        set mainWindow to window "카카오톡"
+        perform action "AXRaise" of mainWindow
+      else
+        set mainWindow to front window
+      end if
+    end tell
+
+    key code 19 using command down
+    delay delaySeconds
+
+    tell process "KakaoTalk"
+      set mainWindow to window "카카오톡"
+      try
+        set tableRef to table 1 of scroll area 1 of mainWindow
+      on error
+        error "NO_CHAT_TABLE"
+      end try
+
+      set rowCount to count of rows of tableRef
+      set rowsToRead to rowCount
+      if rowsToRead > maxRows then set rowsToRead to maxRows
+
+      repeat with i from 1 to rowsToRead
+        try
+          set cellRef to UI element 1 of row i of tableRef
+          set chatName to value of static text 1 of cellRef as text
+          if chatName is not "" then set end of importedNames to chatName
+        end try
+      end repeat
+    end tell
+  end tell
+
+  set AppleScript's text item delimiters to delimiterText
+  set outputText to importedNames as text
+  set AppleScript's text item delimiters to ""
+  return outputText
+end run
 `;

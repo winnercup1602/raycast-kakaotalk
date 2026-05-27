@@ -13,7 +13,9 @@ type ExtensionPreferences = {
   /** Close Chat Window - Close the active KakaoTalk chat window after a message is sent. */
   "closeChatWindowAfterSend": boolean,
   /** Automation Delay - Delay in milliseconds between KakaoTalk UI automation steps. Increase this if your Mac opens chats slowly. */
-  "automationDelayMs": string
+  "automationDelayMs": string,
+  /** Import Chat Limit - Maximum number of recent KakaoTalk chats to import from the chat list. */
+  "importChatLimit": string
 }
 
 /** Preferences accessible in all the extension's commands */
@@ -24,6 +26,8 @@ declare namespace Preferences {
   export type OpenChat = ExtensionPreferences & {}
   /** Preferences accessible in the `add-chat` command */
   export type AddChat = ExtensionPreferences & {}
+  /** Preferences accessible in the `import-chats` command */
+  export type ImportChats = ExtensionPreferences & {}
   /** Preferences accessible in the `send-message` command */
   export type SendMessage = ExtensionPreferences & {}
   /** Preferences accessible in the `open-kakaotalk` command */
@@ -35,6 +39,8 @@ declare namespace Arguments {
   export type OpenChat = {}
   /** Arguments passed to the `add-chat` command */
   export type AddChat = {}
+  /** Arguments passed to the `import-chats` command */
+  export type ImportChats = {}
   /** Arguments passed to the `send-message` command */
   export type SendMessage = {}
   /** Arguments passed to the `open-kakaotalk` command */

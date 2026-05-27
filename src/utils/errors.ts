@@ -27,6 +27,10 @@ function normalizeAutomationError(message: string): string {
     return "Message cannot be empty.";
   }
 
+  if (message.includes("NO_CHAT_TABLE")) {
+    return "Could not find the KakaoTalk chat list. Open KakaoTalk, make sure you are signed in, and try again.";
+  }
+
   const titleMismatch = message.match(/CHAT_TITLE_MISMATCH:([\s\S]*)/);
   if (titleMismatch) {
     const activeTitle = titleMismatch[1]?.trim();

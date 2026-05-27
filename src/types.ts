@@ -27,4 +27,5 @@ export interface Preferences {
   confirmBeforeSend: boolean;
   closeChatWindowAfterSend: boolean;
   automationDelayMs?: string;
+  importChatLimit?: string;
 }

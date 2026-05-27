@@ -35,6 +35,13 @@
       "mode": "view"
     },
     {
+      "name": "import-chats",
+      "title": "Import Chats",
+      "subtitle": "KakaoTalk",
+      "description": "Import recent KakaoTalk chats from the native macOS app.",
+      "mode": "view"
+    },
+    {
       "name": "send-message",
       "title": "Send Message",
       "subtitle": "KakaoTalk",
@@ -88,6 +95,15 @@
       "required": false,
       "default": "500",
       "placeholder": "500"
+    },
+    {
+      "name": "importChatLimit",
+      "title": "Import Chat Limit",
+      "description": "Maximum number of recent KakaoTalk chats to import from the chat list.",
+      "type": "textfield",
+      "required": false,
+      "default": "80",
+      "placeholder": "80"
     }
   ],
   "dependencies": {

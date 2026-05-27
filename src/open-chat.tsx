@@ -1,6 +1,7 @@
 import { Action, ActionPanel, Alert, confirmAlert, Icon, Keyboard, List, showToast, Toast } from "@raycast/api";
 import { useState } from "react";
 import AddChat from "./add-chat";
+import ImportChats from "./import-chats";
 import { SendMessageForm } from "./components/send-message-form";
 import { useKakaoChats } from "./hooks/use-kakao-chats";
 import { openChat } from "./services/automation";
@@ -72,9 +73,10 @@ export default function OpenChat() {
       <List.EmptyView
         icon={Icon.Message}
         title="No Saved Chats"
-        description="Add a chat by the exact name KakaoTalk can find."
+        description="Import existing KakaoTalk chats or add one manually."
         actions={
           <ActionPanel>
+            <Action.Push title="Import Chats" icon={Icon.Download} target={<ImportChats />} />
             <Action.Push title="Add Chat" icon={Icon.Plus} target={<AddChat />} />
           </ActionPanel>
         }
@@ -140,6 +142,7 @@ function ChatListItem({ chat, onOpen, onPin, onDelete }: ChatListItemProps) {
           <ActionPanel.Section>
             <Action.CopyToClipboard title="Copy Display Name" content={chat.name} />
             <Action.CopyToClipboard title="Copy Search Name" content={chat.searchName} />
+            <Action.Push title="Import Chats" icon={Icon.Download} target={<ImportChats />} />
             <Action.Push title="Add Chat" icon={Icon.Plus} target={<AddChat />} />
           </ActionPanel.Section>
         </ActionPanel>

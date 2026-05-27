@@ -13,6 +13,7 @@ KakaoTalk does not provide a public desktop API for arbitrary chat access, so th
 
 - `Open Chat`: search saved chats, open them in KakaoTalk, pin favorites, edit metadata, or start a message.
 - `Add Chat`: save a chat by display name and exact KakaoTalk search name.
+- `Import Chats`: import recent chat names from the KakaoTalk chat list.
 - `Send Message`: choose a saved chat and send a message through KakaoTalk UI automation.
 - `Open KakaoTalk`: open or activate the native app.
 
@@ -24,7 +25,7 @@ KakaoTalk does not provide a public desktop API for arbitrary chat access, so th
 ## Setup
 
 1. Install KakaoTalk for macOS and sign in.
-2. Add chats with the same name KakaoTalk can find in its chat search.
+2. Run `Import Chats` to load recent chat rooms from KakaoTalk, or add a chat manually.
 3. Grant Raycast Accessibility permission when macOS asks. This is required because the extension automates the KakaoTalk UI locally.
 
 ## Development
@@ -47,7 +48,7 @@ This extension stores only the chat names and aliases you add in Raycast local s
 
 ## Notes
 
-Message sending uses the KakaoTalk desktop UI. If a chat cannot be opened or the active chat window title does not match the saved chat name, the extension stops before sending.
+Message sending uses the KakaoTalk desktop UI. If a chat cannot be opened or the active chat window title does not match the saved chat name, the extension stops before sending. Chat import reads chat names from the KakaoTalk list only; it does not read message contents.
 
 ## License
 

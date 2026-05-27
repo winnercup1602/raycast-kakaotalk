@@ -71,3 +71,34 @@ export function getAutomationSearchName(chat: KakaoChat): string {
 export function getExpectedWindowTitle(chat: KakaoChat): string {
   return chat.selfChat ? "나와의 채팅" : chat.searchName || chat.name;
 }
+
+export function mergeImportedChatNames(chats: KakaoChat[], names: string[]): { chats: KakaoChat[]; added: number } {
+  const now = new Date().toISOString();
+  const existingNames = new Set(chats.flatMap((chat) => getChatCandidates(chat).map(normalizeQuery)));
+  const nextChats = [...chats];
+  let added = 0;
+
+  for (const name of names) {
+    const trimmedName = name.trim();
+    const normalizedName = normalizeQuery(trimmedName);
+
+    if (!trimmedName || existingNames.has(normalizedName)) {
+      continue;
+    }
+
+    nextChats.push({
+      id: createChatId(),
+      name: trimmedName,
+      searchName: trimmedName,
+      aliases: [],
+      pinned: false,
+      selfChat: trimmedName === "나와의 채팅",
+      createdAt: now,
+      updatedAt: now,
+    });
+    existingNames.add(normalizedName);
+    added += 1;
+  }
+
+  return { chats: nextChats, added };
+}
