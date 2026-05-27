@@ -16,7 +16,7 @@ import { ChatForm } from "./chat-form";
 import { sendMessageToChat } from "../services/automation";
 import { touchChat } from "../storage";
 import { SendMessageFormValues, Preferences } from "../types";
-import { getChatSubtitle, sortChats } from "../utils/chat";
+import { getChatSubtitle, isRegularChat, sortChats } from "../utils/chat";
 import { getErrorMessage } from "../utils/errors";
 import { getAutomationSettings } from "../utils/preferences";
 import { useKakaoChats } from "../hooks/use-kakao-chats";
@@ -30,7 +30,7 @@ export function SendMessageForm({ defaultChatId }: SendMessageFormProps) {
   const { pop } = useNavigation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState(defaultChatId ?? "");
-  const sortedChats = sortChats(chats);
+  const sortedChats = sortChats(chats).filter(isRegularChat);
 
   async function handleSubmit(values: SendMessageFormValues) {
     const chat = chats.find((item) => item.id === values.chatId);

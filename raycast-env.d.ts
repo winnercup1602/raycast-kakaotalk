@@ -30,6 +30,8 @@ declare namespace Preferences {
   export type ImportChats = ExtensionPreferences & {}
   /** Preferences accessible in the `send-message` command */
   export type SendMessage = ExtensionPreferences & {}
+  /** Preferences accessible in the `open-quiet-chats` command */
+  export type OpenQuietChats = ExtensionPreferences & {}
   /** Preferences accessible in the `open-kakaotalk` command */
   export type OpenKakaotalk = ExtensionPreferences & {}
 }
@@ -43,6 +45,8 @@ declare namespace Arguments {
   export type ImportChats = {}
   /** Arguments passed to the `send-message` command */
   export type SendMessage = {}
+  /** Arguments passed to the `open-quiet-chats` command */
+  export type OpenQuietChats = {}
   /** Arguments passed to the `open-kakaotalk` command */
   export type OpenKakaotalk = {}
 }

@@ -27,6 +27,10 @@ function normalizeAutomationError(message: string): string {
     return "Message cannot be empty.";
   }
 
+  if (message.includes("QUIET_CHAT_FOLDER_NOT_CHAT")) {
+    return "Quiet Chats is a folder, not a sendable chat. Use Open Quiet Chats to browse muted chats in KakaoTalk.";
+  }
+
   if (message.includes("NO_CHAT_TABLE")) {
     return "Could not find the KakaoTalk chat list. Open KakaoTalk, make sure you are signed in, and try again.";
   }

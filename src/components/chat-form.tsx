@@ -2,7 +2,7 @@ import { Action, ActionPanel, Form, Icon, showToast, Toast, useNavigation } from
 import { useState } from "react";
 import { getChats, saveChats } from "../storage";
 import { ChatFormValues, KakaoChat } from "../types";
-import { createChatId, formatAliases, parseAliases } from "../utils/chat";
+import { createChatId, formatAliases, isQuietChatFolderName, parseAliases } from "../utils/chat";
 import { getErrorMessage } from "../utils/errors";
 
 interface ChatFormProps {
@@ -29,14 +29,20 @@ export function ChatForm({ chat }: ChatFormProps) {
         throw new Error("KakaoTalk search name is required.");
       }
 
+      if (isQuietChatFolderName(searchName)) {
+        throw new Error("Quiet Chats is a folder, not a sendable chat. Use Open Quiet Chats instead.");
+      }
+
       const now = new Date().toISOString();
+      const isSelfChat = Boolean(values.selfChat);
       const nextChat: KakaoChat = {
         id: chat?.id ?? createChatId(),
         name,
         searchName,
         aliases: parseAliases(values.aliases),
         pinned: values.pinned,
-        selfChat: values.selfChat,
+        selfChat: isSelfChat,
+        quiet: isSelfChat ? false : values.quiet,
         lastOpened: chat?.lastOpened,
         createdAt: chat?.createdAt ?? now,
         updatedAt: now,
@@ -94,6 +100,7 @@ export function ChatForm({ chat }: ChatFormProps) {
       />
       <Form.Checkbox id="pinned" title="Options" label="Pin Chat" defaultValue={chat?.pinned ?? false} />
       <Form.Checkbox id="selfChat" title="" label="This is my self-chat" defaultValue={chat?.selfChat ?? false} />
+      <Form.Checkbox id="quiet" title="" label="This chat is inside Quiet Chats" defaultValue={chat?.quiet ?? false} />
     </Form>
   );
 }

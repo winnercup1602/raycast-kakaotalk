@@ -2,7 +2,12 @@ import { getApplications } from "@raycast/api";
 import { runAppleScript } from "@raycast/utils";
 import { KakaoChat } from "../types";
 import { AutomationSettings } from "../utils/preferences";
-import { getAutomationSearchName, getExpectedWindowTitle } from "../utils/chat";
+import {
+  getAutomationSearchName,
+  getExpectedWindowTitle,
+  isQuietChatFolder,
+  QUIET_CHAT_FOLDER_NAME,
+} from "../utils/chat";
 
 export const KAKAOTALK_BUNDLE_ID = "com.kakao.KakaoTalkMac";
 
@@ -29,6 +34,7 @@ end tell
 }
 
 export async function openChat(chat: KakaoChat, options: OpenChatOptions): Promise<string> {
+  assertRegularChat(chat);
   return runChatAutomation(chat, "", options);
 }
 
@@ -37,7 +43,20 @@ export async function sendMessageToChat(
   message: string,
   options: SendMessageOptions,
 ): Promise<string> {
+  assertRegularChat(chat);
   return runChatAutomation(chat, message, options);
+}
+
+export async function openQuietChats(options: AutomationSettings): Promise<string> {
+  await ensureKakaoTalkInstalled();
+
+  const result = await runAppleScript(
+    CHAT_AUTOMATION_SCRIPT,
+    [QUIET_CHAT_FOLDER_NAME, "", "0", "0", String(options.delayMs / 1000), "", ""],
+    { timeout: 30000 },
+  );
+
+  return result.trim();
 }
 
 export async function importChatNames(options: { delayMs: number; limit: number }): Promise<string[]> {
@@ -47,10 +66,32 @@ export async function importChatNames(options: { delayMs: number; limit: number 
     timeout: 120000,
   });
 
+  return parseImportedNames(result);
+}
+
+export async function importQuietChatNames(options: { delayMs: number; limit: number }): Promise<string[]> {
+  await ensureKakaoTalkInstalled();
+
+  const result = await runAppleScript(
+    IMPORT_CHATS_SCRIPT,
+    [String(options.limit), String(options.delayMs / 1000), QUIET_CHAT_FOLDER_NAME],
+    { timeout: 120000 },
+  );
+
+  return parseImportedNames(result);
+}
+
+function parseImportedNames(result: string): string[] {
   return result
     .split("\u001f")
     .map((name) => name.trim())
     .filter(Boolean);
+}
+
+function assertRegularChat(chat: KakaoChat): void {
+  if (isQuietChatFolder(chat)) {
+    throw new Error("QUIET_CHAT_FOLDER_NOT_CHAT");
+  }
 }
 
 async function ensureKakaoTalkInstalled(): Promise<void> {
@@ -74,10 +115,11 @@ async function runChatAutomation(
   const delaySeconds = String(options.delayMs / 1000);
   const shouldSend = options.shouldSend === true ? "1" : "0";
   const shouldClose = options.closeAfterSend ? "1" : "0";
+  const parentFolderName = chat.quiet ? QUIET_CHAT_FOLDER_NAME : "";
 
   const result = await runAppleScript(
     CHAT_AUTOMATION_SCRIPT,
-    [searchName, message, shouldSend, shouldClose, delaySeconds, expectedTitle],
+    [searchName, message, shouldSend, shouldClose, delaySeconds, expectedTitle, parentFolderName],
     { timeout: 30000 },
   );
 
@@ -92,6 +134,7 @@ on run argv
   set shouldClose to item 4 of argv is "1"
   set delaySeconds to item 5 of argv as real
   set expectedTitle to item 6 of argv
+  set parentFolderName to item 7 of argv
   set previousClipboard to missing value
   set openedTitle to ""
 
@@ -125,9 +168,12 @@ on run argv
 
     delay delaySeconds
 
-    tell application "System Events"
-      key code 19 using command down
-    end tell
+    my activateRootChatTab(delaySeconds)
+
+    if parentFolderName is not "" then
+      my searchAndOpenChat(parentFolderName, delaySeconds)
+      delay delaySeconds
+    end if
 
     my searchAndOpenChat(chatName, delaySeconds)
 
@@ -181,6 +227,14 @@ on titleDoesNotMatch(openedTitle, expectedTitle)
   if expectedTitle contains openedTitle then return false
   return true
 end titleDoesNotMatch
+
+on activateRootChatTab(delaySeconds)
+  tell application "System Events"
+    key code 18 using command down
+    delay delaySeconds
+    key code 19 using command down
+  end tell
+end activateRootChatTab
 
 on searchAndOpenChat(chatName, delaySeconds)
   tell application "System Events"
@@ -250,6 +304,8 @@ const IMPORT_CHATS_SCRIPT = `
 on run argv
   set maxRows to item 1 of argv as integer
   set delaySeconds to item 2 of argv as real
+  set folderName to ""
+  if (count of argv) > 2 then set folderName to item 3 of argv
   set importedNames to {}
   set delimiterText to ASCII character 31
 
@@ -276,8 +332,13 @@ on run argv
       end if
     end tell
 
-    key code 19 using command down
+    my activateRootChatTab(delaySeconds)
     delay delaySeconds
+
+    if folderName is not "" then
+      my searchAndOpenChat(folderName, delaySeconds)
+      delay delaySeconds
+    end if
 
     tell process "KakaoTalk"
       set mainWindow to window "카카오톡"
@@ -306,4 +367,67 @@ on run argv
   set AppleScript's text item delimiters to ""
   return outputText
 end run
+
+on activateRootChatTab(delaySeconds)
+  tell application "System Events"
+    key code 18 using command down
+    delay delaySeconds
+    key code 19 using command down
+  end tell
+end activateRootChatTab
+
+on searchAndOpenChat(chatName, delaySeconds)
+  tell application "System Events"
+    tell process "KakaoTalk"
+      if not (exists window "카카오톡") then error "NO_CHAT_TABLE"
+      set mainWindow to window "카카오톡"
+      try
+        set searchField to text field 1 of mainWindow
+      on error
+        error "NO_CHAT_SEARCH_FIELD"
+      end try
+
+      set focused of searchField to true
+      set value of searchField to ""
+      delay (delaySeconds / 2)
+      set value of searchField to chatName
+    end tell
+
+    delay (delaySeconds * 2)
+
+    tell process "KakaoTalk"
+      try
+        set tableRef to table 1 of scroll area 1 of window "카카오톡"
+      on error
+        error "NO_CHAT_TABLE"
+      end try
+
+      set rowCount to count of rows of tableRef
+      set rowsToCheck to rowCount
+      if rowsToCheck > 25 then set rowsToCheck to 25
+
+      set matchedIndex to 0
+      repeat with i from 1 to rowsToCheck
+        try
+          set cellRef to UI element 1 of row i of tableRef
+          set rowName to value of static text 1 of cellRef as text
+          if rowName is chatName or rowName contains chatName or chatName contains rowName then
+            set matchedIndex to i
+            exit repeat
+          end if
+        end try
+      end repeat
+
+      if matchedIndex is 0 then error "CHAT_NOT_FOUND:" & chatName
+      set focused of text field 1 of window "카카오톡" to true
+    end tell
+
+    repeat matchedIndex times
+      key code 125
+      delay 0.05
+    end repeat
+    delay (delaySeconds / 2)
+    key code 36
+  end tell
+end searchAndOpenChat
 `;

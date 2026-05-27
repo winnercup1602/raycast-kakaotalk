@@ -13,8 +13,9 @@ KakaoTalk does not provide a public desktop API for arbitrary chat access, so th
 
 - `Open Chat`: search saved chats, open them in KakaoTalk, pin favorites, edit metadata, or start a message.
 - `Add Chat`: save a chat by display name and exact KakaoTalk search name.
-- `Import Chats`: import recent chat names from the KakaoTalk chat list.
+- `Import Chats`: import recent chat names from the KakaoTalk chat list, or import muted rooms from Quiet Chats.
 - `Send Message`: choose a saved chat and send a message through KakaoTalk UI automation.
+- `Open Quiet Chats`: open KakaoTalk's muted chat folder separately.
 - `Open KakaoTalk`: open or activate the native app.
 
 ## AI Tools
@@ -48,7 +49,7 @@ This extension stores only the chat names and aliases you add in Raycast local s
 
 ## Notes
 
-Message sending uses the KakaoTalk desktop UI. If a chat cannot be opened or the active chat window title does not match the saved chat name, the extension stops before sending. Chat import reads chat names from the KakaoTalk list only; it does not read message contents.
+Message sending uses the KakaoTalk desktop UI. If a chat cannot be opened or the active chat window title does not match the saved chat name, the extension stops before sending. Chat import reads chat names from the KakaoTalk list only; it does not read message contents. KakaoTalk's `조용한 채팅방` entry is treated as a folder, and muted rooms imported from that folder are opened by entering Quiet Chats first.
 
 ## License
 

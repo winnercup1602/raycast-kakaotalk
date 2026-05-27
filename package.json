@@ -49,6 +49,13 @@
       "mode": "view"
     },
     {
+      "name": "open-quiet-chats",
+      "title": "Open Quiet Chats",
+      "subtitle": "KakaoTalk",
+      "description": "Open KakaoTalk's Quiet Chats folder in the native macOS app.",
+      "mode": "no-view"
+    },
+    {
       "name": "open-kakaotalk",
       "title": "Open KakaoTalk",
       "subtitle": "KakaoTalk",
