@@ -149,13 +149,7 @@ on run argv
     end if
 
     if shouldSend then
-      set the clipboard to messageText
-      delay (delaySeconds / 2)
-      tell application "System Events"
-        keystroke "v" using command down
-        delay delaySeconds
-        key code 36
-      end tell
+      my pasteAndSendMessage(messageText, delaySeconds)
       delay delaySeconds
 
       if shouldClose then
@@ -199,6 +193,67 @@ on activateRootChatTab(delaySeconds)
     key code 19 using command down
   end tell
 end activateRootChatTab
+
+on pasteAndSendMessage(messageText, delaySeconds)
+  set the clipboard to messageText
+
+  tell application "System Events"
+    set inputArea to my focusMessageInput()
+    delay (delaySeconds / 2)
+    keystroke "v" using command down
+    delay delaySeconds
+
+    set couldReadPastedText to false
+    set pastedText to ""
+    try
+      set pastedText to value of inputArea as text
+      set couldReadPastedText to true
+    end try
+    if couldReadPastedText and pastedText does not contain messageText then error "MESSAGE_PASTE_FAILED"
+
+    key code 36
+  end tell
+end pasteAndSendMessage
+
+on focusMessageInput()
+  tell application "System Events"
+    tell process "KakaoTalk"
+      if not (exists front window) then error "CHAT_NOT_SENDABLE"
+      set chatWindow to front window
+      set inputCandidates to {}
+
+      try
+        repeat with candidateInput in text areas of chatWindow
+          set end of inputCandidates to candidateInput
+        end repeat
+      end try
+
+      try
+        repeat with candidateInput in entire contents of chatWindow
+          try
+            if role of candidateInput is "AXTextArea" then set end of inputCandidates to candidateInput
+          end try
+        end repeat
+      end try
+
+      repeat with candidateInput in inputCandidates
+        try
+          set inputEnabled to true
+          try
+            if enabled of candidateInput is false then set inputEnabled to false
+          end try
+          if inputEnabled then
+            set focused of candidateInput to true
+            delay 0.1
+            if focused of candidateInput is true then return candidateInput
+          end if
+        end try
+      end repeat
+    end tell
+  end tell
+
+  error "CHAT_NOT_SENDABLE"
+end focusMessageInput
 
 on searchAndOpenChat(chatName, delaySeconds)
   tell application "System Events"
