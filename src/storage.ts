@@ -66,7 +66,6 @@ function normalizeChat(value: unknown): KakaoChat | undefined {
     aliases: Array.isArray(chat.aliases) ? chat.aliases.map(String).filter(Boolean) : [],
     pinned: Boolean(chat.pinned),
     selfChat: Boolean(chat.selfChat),
-    quiet: Boolean(chat.quiet),
     lastOpened: typeof chat.lastOpened === "number" ? chat.lastOpened : undefined,
     createdAt: chat.createdAt || now,
     updatedAt: chat.updatedAt || now,

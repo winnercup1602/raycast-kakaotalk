@@ -28,7 +28,7 @@ function normalizeAutomationError(message: string): string {
   }
 
   if (message.includes("QUIET_CHAT_FOLDER_NOT_CHAT")) {
-    return "Quiet Chats is a folder, not a sendable chat. Use Open Quiet Chats to browse muted chats in KakaoTalk.";
+    return "Quiet Chats is a folder row, not an individual chat. Search for the actual chat name instead.";
   }
 
   if (message.includes("NO_CHAT_TABLE")) {

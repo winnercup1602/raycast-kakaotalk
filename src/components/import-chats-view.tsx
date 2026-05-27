@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Icon, List, showToast, Toast } from "@raycast/api";
 import { useState } from "react";
 import { useKakaoChats } from "../hooks/use-kakao-chats";
-import { importChatNames, importQuietChatNames } from "../services/automation";
+import { importChatNames } from "../services/automation";
 import {
   filterImportableChatNames,
   getChatCandidates,
@@ -19,29 +19,28 @@ export function ImportChatsView() {
   const [isImporting, setIsImporting] = useState(false);
   const existingNames = new Set(chats.flatMap((chat) => getChatCandidates(chat).map(normalizeQuery)));
 
-  async function handleImport(source: "recent" | "quiet") {
+  async function handleImport() {
     setIsImporting(true);
     const settings = getImportSettings();
-    const isQuietImport = source === "quiet";
     const toast = await showToast({
       style: Toast.Style.Animated,
-      title: isQuietImport ? "Importing Quiet Chats" : "Importing KakaoTalk Chats",
-      message: `Reading up to ${settings.limit} ${isQuietImport ? "quiet" : "recent"} chats`,
+      title: "Importing KakaoTalk Chats",
+      message: `Reading up to ${settings.limit} recent chats`,
     });
 
     try {
-      const names = isQuietImport ? await importQuietChatNames(settings) : await importChatNames(settings);
-      const merged = mergeImportedChatNames(chats, names, { quiet: isQuietImport });
+      const names = await importChatNames(settings);
+      const merged = mergeImportedChatNames(chats, names);
 
       await setChats(merged.chats);
       await reload();
       setImportedNames(names);
 
       toast.style = Toast.Style.Success;
-      toast.title = isQuietImport ? "Quiet Chats Imported" : "Chats Imported";
+      toast.title = "Chats Imported";
       toast.message = `${merged.added} new, ${filterImportableChatNames(names).length} chats found${
-        merged.updated ? `, ${merged.updated} updated` : ""
-      }${merged.skipped ? `, ${merged.skipped} folder skipped` : ""}`;
+        merged.skipped ? `, ${merged.skipped} folder row skipped` : ""
+      }`;
     } catch (error) {
       toast.style = Toast.Style.Failure;
       toast.title = "Could Not Import Chats";
@@ -66,8 +65,7 @@ export function ImportChatsView() {
         description="Read recent chat names from the KakaoTalk app without reading message history."
         actions={
           <ActionPanel>
-            <Action title="Import Recent Chats" icon={Icon.Download} onAction={() => handleImport("recent")} />
-            <Action title="Import Quiet Chats" icon={Icon.BellDisabled} onAction={() => handleImport("quiet")} />
+            <Action title="Import Recent Chats" icon={Icon.Download} onAction={handleImport} />
           </ActionPanel>
         }
       />
@@ -82,8 +80,7 @@ export function ImportChatsView() {
             accessories={[{ text: exists ? "Saved" : "New" }]}
             actions={
               <ActionPanel>
-                <Action title="Import Recent Chats" icon={Icon.Download} onAction={() => handleImport("recent")} />
-                <Action title="Import Quiet Chats" icon={Icon.BellDisabled} onAction={() => handleImport("quiet")} />
+                <Action title="Import Recent Chats" icon={Icon.Download} onAction={handleImport} />
               </ActionPanel>
             }
           />

@@ -43,10 +43,6 @@ export function getChatSubtitle(chat: KakaoChat): string {
     return "Self Chat";
   }
 
-  if (chat.quiet) {
-    return chat.searchName === chat.name ? "Quiet Chats" : `Quiet Chats · ${chat.searchName}`;
-  }
-
   return chat.searchName === chat.name ? "KakaoTalk" : chat.searchName;
 }
 
@@ -106,14 +102,12 @@ export function getExpectedWindowTitle(chat: KakaoChat): string {
 export function mergeImportedChatNames(
   chats: KakaoChat[],
   names: string[],
-  options: { quiet?: boolean } = {},
-): { chats: KakaoChat[]; added: number; skipped: number; updated: number } {
+): { chats: KakaoChat[]; added: number; skipped: number } {
   const now = new Date().toISOString();
   const nextChats = [...chats];
   const existingNames = new Map<string, number>();
   let added = 0;
   let skipped = 0;
-  let updated = 0;
 
   nextChats.forEach((chat, index) => {
     for (const candidate of getChatCandidates(chat)) {
@@ -136,15 +130,6 @@ export function mergeImportedChatNames(
 
     const existingIndex = existingNames.get(normalizedName);
     if (existingIndex !== undefined) {
-      const existingChat = nextChats[existingIndex];
-      if (options.quiet && !existingChat.quiet && !existingChat.selfChat) {
-        nextChats[existingIndex] = {
-          ...existingChat,
-          quiet: true,
-          updatedAt: now,
-        };
-        updated += 1;
-      }
       continue;
     }
 
@@ -156,7 +141,6 @@ export function mergeImportedChatNames(
       aliases: [],
       pinned: false,
       selfChat: isSelfChat,
-      quiet: !isSelfChat && Boolean(options.quiet),
       createdAt: now,
       updatedAt: now,
     });
@@ -164,5 +148,5 @@ export function mergeImportedChatNames(
     added += 1;
   }
 
-  return { chats: nextChats, added, skipped, updated };
+  return { chats: nextChats, added, skipped };
 }

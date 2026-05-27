@@ -2,4 +2,4 @@
 
 ## 1.0.0
 
-- Initial release with saved chats, regular and quiet chat import, open chat, send message, and open app commands.
+- Initial release with saved chats, chat import, Quiet Chats folder-row filtering, open chat, send message, and open app commands.

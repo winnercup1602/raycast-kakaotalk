@@ -30,7 +30,7 @@ export function ChatForm({ chat }: ChatFormProps) {
       }
 
       if (isQuietChatFolderName(searchName)) {
-        throw new Error("Quiet Chats is a folder, not a sendable chat. Use Open Quiet Chats instead.");
+        throw new Error("Quiet Chats is a folder row, not an individual chat. Add the actual chat name instead.");
       }
 
       const now = new Date().toISOString();
@@ -42,7 +42,6 @@ export function ChatForm({ chat }: ChatFormProps) {
         aliases: parseAliases(values.aliases),
         pinned: values.pinned,
         selfChat: isSelfChat,
-        quiet: isSelfChat ? false : values.quiet,
         lastOpened: chat?.lastOpened,
         createdAt: chat?.createdAt ?? now,
         updatedAt: now,
@@ -100,7 +99,6 @@ export function ChatForm({ chat }: ChatFormProps) {
       />
       <Form.Checkbox id="pinned" title="Options" label="Pin Chat" defaultValue={chat?.pinned ?? false} />
       <Form.Checkbox id="selfChat" title="" label="This is my self-chat" defaultValue={chat?.selfChat ?? false} />
-      <Form.Checkbox id="quiet" title="" label="This chat is inside Quiet Chats" defaultValue={chat?.quiet ?? false} />
     </Form>
   );
 }

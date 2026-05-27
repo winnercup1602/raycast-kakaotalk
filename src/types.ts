@@ -5,7 +5,6 @@ export interface KakaoChat {
   aliases: string[];
   pinned: boolean;
   selfChat: boolean;
-  quiet?: boolean;
   lastOpened?: number;
   createdAt: string;
   updatedAt: string;
@@ -17,7 +16,6 @@ export interface ChatFormValues {
   aliases?: string;
   pinned: boolean;
   selfChat: boolean;
-  quiet: boolean;
 }
 
 export interface SendMessageFormValues {

@@ -4,7 +4,7 @@ import AddChat from "./add-chat";
 import ImportChats from "./import-chats";
 import { SendMessageForm } from "./components/send-message-form";
 import { useKakaoChats } from "./hooks/use-kakao-chats";
-import { openChat, openQuietChats } from "./services/automation";
+import { openChat } from "./services/automation";
 import { touchChat } from "./storage";
 import { KakaoChat } from "./types";
 import { getChatKeywords, getChatSubtitle, isRegularChat, sortChats } from "./utils/chat";
@@ -63,23 +63,6 @@ export default function OpenChat() {
     await setChats((currentChats) => currentChats.filter((item) => item.id !== chat.id));
   }
 
-  async function handleOpenQuietChats() {
-    const toast = await showToast({
-      style: Toast.Style.Animated,
-      title: "Opening Quiet Chats",
-    });
-
-    try {
-      await openQuietChats(getAutomationSettings());
-      toast.style = Toast.Style.Success;
-      toast.title = "Quiet Chats Opened";
-    } catch (error) {
-      toast.style = Toast.Style.Failure;
-      toast.title = "Could Not Open Quiet Chats";
-      toast.message = getErrorMessage(error);
-    }
-  }
-
   return (
     <List
       isLoading={isLoading}
@@ -94,20 +77,12 @@ export default function OpenChat() {
         actions={
           <ActionPanel>
             <Action.Push title="Import Chats" icon={Icon.Download} target={<ImportChats />} />
-            <Action title="Open Quiet Chats" icon={Icon.BellDisabled} onAction={handleOpenQuietChats} />
             <Action.Push title="Add Chat" icon={Icon.Plus} target={<AddChat />} />
           </ActionPanel>
         }
       />
       {sortedChats.map((chat) => (
-        <ChatListItem
-          key={chat.id}
-          chat={chat}
-          onOpen={handleOpen}
-          onOpenQuietChats={handleOpenQuietChats}
-          onPin={handlePin}
-          onDelete={handleDelete}
-        />
+        <ChatListItem key={chat.id} chat={chat} onOpen={handleOpen} onPin={handlePin} onDelete={handleDelete} />
       ))}
     </List>
   );
@@ -116,12 +91,11 @@ export default function OpenChat() {
 interface ChatListItemProps {
   chat: KakaoChat;
   onOpen: (chat: KakaoChat) => void;
-  onOpenQuietChats: () => void;
   onPin: (chat: KakaoChat) => void;
   onDelete: (chat: KakaoChat) => void;
 }
 
-function ChatListItem({ chat, onOpen, onOpenQuietChats, onPin, onDelete }: ChatListItemProps) {
+function ChatListItem({ chat, onOpen, onPin, onDelete }: ChatListItemProps) {
   return (
     <List.Item
       id={chat.id}
@@ -131,7 +105,6 @@ function ChatListItem({ chat, onOpen, onOpenQuietChats, onPin, onDelete }: ChatL
       keywords={getChatKeywords(chat)}
       accessories={[
         ...(chat.pinned ? [{ icon: Icon.Pin, tooltip: "Pinned" }] : []),
-        ...(chat.quiet ? [{ icon: Icon.BellDisabled, tooltip: "Quiet Chats" }] : []),
         ...(chat.lastOpened ? [{ text: new Date(chat.lastOpened).toLocaleDateString(), tooltip: "Last opened" }] : []),
       ]}
       actions={
@@ -169,7 +142,6 @@ function ChatListItem({ chat, onOpen, onOpenQuietChats, onPin, onDelete }: ChatL
             <Action.CopyToClipboard title="Copy Display Name" content={chat.name} />
             <Action.CopyToClipboard title="Copy Search Name" content={chat.searchName} />
             <Action.Push title="Import Chats" icon={Icon.Download} target={<ImportChats />} />
-            <Action title="Open Quiet Chats" icon={Icon.BellDisabled} onAction={onOpenQuietChats} />
             <Action.Push title="Add Chat" icon={Icon.Plus} target={<AddChat />} />
           </ActionPanel.Section>
         </ActionPanel>
