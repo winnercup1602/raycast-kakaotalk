@@ -35,6 +35,10 @@ function normalizeAutomationError(message: string): string {
     return "KakaoTalk did not accept the message text, so no message was sent. Try again after opening the chat manually.";
   }
 
+  if (message.includes("MESSAGE_SEND_FAILED")) {
+    return "The message was entered, but KakaoTalk did not send it. Check whether this chat requires a different send shortcut or blocks replies.";
+  }
+
   if (message.includes("QUIET_CHAT_FOLDER_NOT_CHAT")) {
     return "Quiet Chats is a folder row, not an individual chat. Search for the actual chat name instead.";
   }

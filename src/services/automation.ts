@@ -210,10 +210,100 @@ on pasteAndSendMessage(messageText, delaySeconds)
       set couldReadPastedText to true
     end try
     if couldReadPastedText and pastedText does not contain messageText then error "MESSAGE_PASTE_FAILED"
+  end tell
 
+  my sendFocusedMessage(inputArea, messageText, delaySeconds)
+end pasteAndSendMessage
+
+on sendFocusedMessage(inputArea, messageText, delaySeconds)
+  tell application "System Events"
     key code 36
   end tell
-end pasteAndSendMessage
+  delay delaySeconds
+  if not my messageStillInInput(inputArea, messageText) then return
+
+  tell application "System Events"
+    key code 36 using command down
+  end tell
+  delay delaySeconds
+  if not my messageStillInInput(inputArea, messageText) then return
+
+  if my pressSendButton() then
+    delay delaySeconds
+    if not my messageStillInInput(inputArea, messageText) then return
+  end if
+
+  error "MESSAGE_SEND_FAILED"
+end sendFocusedMessage
+
+on messageStillInInput(inputArea, messageText)
+  try
+    set currentText to value of inputArea as text
+    if currentText is "" then return false
+    if currentText contains messageText then return true
+    return false
+  on error
+    try
+      set currentInputArea to my focusMessageInput()
+      set currentText to value of currentInputArea as text
+      if currentText is "" then return false
+      if currentText contains messageText then return true
+    end try
+
+    return false
+  end try
+end messageStillInInput
+
+on pressSendButton()
+  tell application "System Events"
+    tell process "KakaoTalk"
+      if not (exists front window) then return false
+      try
+        repeat with candidateButton in entire contents of front window
+          try
+            if role of candidateButton is "AXButton" then
+              set labelText to my uiElementText(candidateButton)
+              if my isSendButtonLabel(labelText) then
+                set buttonEnabled to true
+                try
+                  if enabled of candidateButton is false then set buttonEnabled to false
+                end try
+                if buttonEnabled then
+                  perform action "AXPress" of candidateButton
+                  return true
+                end if
+              end if
+            end if
+          end try
+        end repeat
+      end try
+    end tell
+  end tell
+
+  return false
+end pressSendButton
+
+on uiElementText(uiElement)
+  set labelText to ""
+  try
+    set labelText to labelText & " " & (name of uiElement as text)
+  end try
+  try
+    set labelText to labelText & " " & (description of uiElement as text)
+  end try
+  try
+    set labelText to labelText & " " & (value of uiElement as text)
+  end try
+  return labelText
+end uiElementText
+
+on isSendButtonLabel(labelText)
+  if labelText contains "전송" then return true
+  if labelText contains "보내기" then return true
+  if labelText contains "Send" then return true
+  if labelText contains "send" then return true
+  return false
+end isSendButtonLabel
 
 on focusMessageInput()
   tell application "System Events"
