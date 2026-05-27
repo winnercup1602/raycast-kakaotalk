@@ -37,7 +37,7 @@ const AUTOMATION_ERROR_MESSAGES = [
   ["KAKAOTALK_NOT_RUNNING", "KakaoTalk did not start correctly."],
   [
     "KAKAOTALK_NOT_FRONTMOST",
-    "KakaoTalk did not become the active app, so no keyboard input was sent. Try again after bringing KakaoTalk to the front once.",
+    "KakaoTalk did not become the active app, so no keyboard input was sent. If KakaoTalk is on a different desktop (Space), switch to that desktop once and try again.",
   ],
   ["EMPTY_MESSAGE", "Message cannot be empty."],
   [

@@ -97,6 +97,63 @@ async function runChatAutomation(
   return result.trim();
 }
 
+const KAKAOTALK_FRONTMOST_HELPERS = `
+on ensureKakaoTalkFrontmost(delaySeconds, raiseMainWindow)
+  set stepDelay to my stableStepDelay(delaySeconds)
+
+  repeat 80 times
+    my activateAndRaiseKakaoTalk(raiseMainWindow)
+    delay stepDelay
+
+    if my isKakaoTalkFrontmostProcess() then return
+  end repeat
+
+  error "KAKAOTALK_NOT_FRONTMOST"
+end ensureKakaoTalkFrontmost
+
+on activateAndRaiseKakaoTalk(raiseMainWindow)
+  tell application id "com.kakao.KakaoTalkMac"
+    reopen
+    activate
+  end tell
+
+  tell application "System Events"
+    if exists process "KakaoTalk" then
+      tell process "KakaoTalk"
+        try
+          set frontmost to true
+        end try
+        if raiseMainWindow then
+          try
+            if exists window "카카오톡" then perform action "AXRaise" of window "카카오톡"
+          end try
+        end if
+        try
+          if exists front window then perform action "AXRaise" of front window
+        end try
+      end tell
+    end if
+  end tell
+end activateAndRaiseKakaoTalk
+
+on isKakaoTalkFrontmostProcess()
+  tell application "System Events"
+    try
+      set activeProcessName to name of first application process whose frontmost is true and visible is true
+      return activeProcessName is "KakaoTalk"
+    on error
+      return false
+    end try
+  end tell
+end isKakaoTalkFrontmostProcess
+
+on stableStepDelay(delaySeconds)
+  if delaySeconds < 0.12 then return 0.12
+  if delaySeconds > 0.4 then return 0.4
+  return delaySeconds
+end stableStepDelay
+`;
+
 const CHAT_AUTOMATION_SCRIPT = `
 on run argv
   set chatName to item 1 of argv
@@ -118,7 +175,7 @@ on run argv
       if UI elements enabled is false then error "ACCESSIBILITY_PERMISSION_REQUIRED"
     end tell
 
-    my ensureKakaoTalkFrontmost()
+    my ensureKakaoTalkFrontmost(delaySeconds, false)
     my searchAndOpenChat(chatName, delaySeconds)
     set openedTitle to my ensureChatWindowFrontmost(delaySeconds)
 
@@ -127,7 +184,7 @@ on run argv
 
       if shouldClose then
         tell application "System Events"
-          my ensureKakaoTalkFrontmost()
+          my ensureKakaoTalkFrontmost(delaySeconds, false)
           key code 13 using command down
         end tell
       end if
@@ -141,37 +198,7 @@ on run argv
   end try
 end run
 
-on ensureKakaoTalkFrontmost()
-  tell application id "com.kakao.KakaoTalkMac"
-    reopen
-    activate
-  end tell
-
-  tell application "System Events"
-    repeat 50 times
-      if exists process "KakaoTalk" then
-        tell process "KakaoTalk"
-          try
-            set frontmost to true
-          end try
-          try
-            if exists front window then perform action "AXRaise" of front window
-          end try
-        end tell
-
-        delay 0.05
-
-        try
-          if frontmost of process "KakaoTalk" is true then return
-        end try
-      end if
-
-      delay 0.1
-    end repeat
-  end tell
-
-  error "KAKAOTALK_NOT_FRONTMOST"
-end ensureKakaoTalkFrontmost
+${KAKAOTALK_FRONTMOST_HELPERS}
 
 on waitForMainWindow(delaySeconds)
   tell application "System Events"
@@ -204,7 +231,7 @@ end frontWindowTitle
 
 on activateChatSearch(delaySeconds)
   tell application "System Events"
-    my ensureKakaoTalkFrontmost()
+    my ensureKakaoTalkFrontmost(delaySeconds, false)
     key code 19 using command down
   end tell
   delay delaySeconds
@@ -215,12 +242,12 @@ on pasteAndSendMessage(messageText, delaySeconds)
   delay 0.05
 
   tell application "System Events"
-    my ensureKakaoTalkFrontmost()
+    my ensureKakaoTalkFrontmost(delaySeconds, false)
     key code 9 using command down
   end tell
   delay delaySeconds
   tell application "System Events"
-    my ensureKakaoTalkFrontmost()
+    my ensureKakaoTalkFrontmost(delaySeconds, false)
     key code 36
   end tell
 end pasteAndSendMessage
@@ -229,21 +256,24 @@ on searchAndOpenChat(chatName, delaySeconds)
   my waitForMainWindow(delaySeconds)
   my activateChatSearch(delaySeconds)
   my pasteIntoSearchField(chatName, delaySeconds)
+  my openFirstSearchResult(delaySeconds)
+end searchAndOpenChat
 
+on openFirstSearchResult(delaySeconds)
   tell application "System Events"
-    my ensureKakaoTalkFrontmost()
+    my ensureKakaoTalkFrontmost(delaySeconds, false)
     key code 125
     delay 0.08
     key code 36
   end tell
-end searchAndOpenChat
+end openFirstSearchResult
 
 on pasteIntoSearchField(chatName, delaySeconds)
   set the clipboard to chatName
   delay 0.05
 
   tell application "System Events"
-    my ensureKakaoTalkFrontmost()
+    my ensureKakaoTalkFrontmost(delaySeconds, false)
     key code 3 using command down
     delay (delaySeconds / 2)
     key code 0 using command down
@@ -256,17 +286,19 @@ on pasteIntoSearchField(chatName, delaySeconds)
 end pasteIntoSearchField
 
 on ensureChatWindowFrontmost(delaySeconds)
-  repeat 50 times
+  set stepDelay to my stableStepDelay(delaySeconds)
+  set openRetryCount to 0
+
+  repeat 80 times
     set currentTitle to my frontWindowTitle()
     if currentTitle is not "" and currentTitle is not "카카오톡" then return currentTitle
 
-    tell application "System Events"
-      if not (exists process "KakaoTalk") then error "KAKAOTALK_NOT_RUNNING"
-      my ensureKakaoTalkFrontmost()
-      key code 36
-    end tell
+    if currentTitle is "카카오톡" and openRetryCount < 2 then
+      my openFirstSearchResult(delaySeconds)
+      set openRetryCount to openRetryCount + 1
+    end if
 
-    delay delaySeconds
+    delay stepDelay
   end repeat
 
   error "CHAT_OPEN_FAILED"
@@ -297,12 +329,11 @@ on run argv
     activate
   end tell
 
-  delay delaySeconds
+  my ensureKakaoTalkFrontmost(delaySeconds, true)
 
   tell application "System Events"
     if not (exists process "KakaoTalk") then error "KAKAOTALK_NOT_RUNNING"
     tell process "KakaoTalk"
-      set frontmost to true
       if exists window "카카오톡" then
         set mainWindow to window "카카오톡"
         perform action "AXRaise" of mainWindow
@@ -341,6 +372,8 @@ on run argv
   set AppleScript's text item delimiters to ""
   return outputText
 end run
+
+${KAKAOTALK_FRONTMOST_HELPERS}
 
 on activateRootChatTab(delaySeconds)
   tell application "System Events"
